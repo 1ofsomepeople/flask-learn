@@ -41,14 +41,24 @@ import time
 import numpy as np
 import math
 import sys
+import json
 from PIL import Image
 Image.MAX_IMAGE_PIXELS = None
 import threading
 from threading import Thread
+import lnglat_mercator_tiles_convertor as convertor
 
 import requests
 import random
 
+from urllib.parse import urlparse, parse_qs, parse_qsl
+
+import png2json as png2json
+
+
+tilePoint = png2json.readpoints()
+# print(tilePoint['31621178'])
+resJsonData = []
 # show tile pictures 256*256
 def showBmap(my_url):
     size = 256
@@ -68,16 +78,29 @@ def showBmap(my_url):
     except IOError:
 #        print('fail to convert')
         return np.zeros((size,size))
-    return img
+    urlparam = parse_qs(urlparse(my_url).query)
+    level = int(urlparam['level'][0])
+    tile_x = int(urlparam['x'][0])
+    tile_y = int(urlparam['y'][0])
 
-# miaomiaomiao？ unused function
-# def imageToArray(im):
-#     im = im.convert('L')
-#     width,height = im.size
-#     data = im.getdata()
-#     data = np.matrix(data,dtype='float')/255.0
-#     new_data = np.reshape(data,(width,height))
-#     return new_data
+    tileName = str(tile_x)+str(tile_y)
+
+    if(tileName in tilePoint.keys()):
+    #     # print(tileName)
+        tempArr = tilePoint[tileName]
+        for temppoint in tempArr:    
+            if(temppoint[0] < 256 and temppoint[1] < 256):
+                R,G,B = img.getpixel((temppoint[0],255-temppoint[1]))
+                if(R+G+B>0):
+                    # RGB归一化 消除光照影响
+                    r = R / (R+G+B)
+                    g = G / (R+G+B) 
+                    b = 1 - r - g
+                    value = png2json.RGB2Value(r,g,b)
+                    if(value == 0):
+                        value = 3
+                    resJsonData.append([temppoint[2],temppoint[3],value])
+    return img
 
 # degree of longitude 经度 latitude 纬度    
 # OpenStreetMap经纬度转行列号 不准确的 OpenStreetMap用的是WGS84 百度用的是BD09
@@ -198,7 +221,7 @@ def down_a_map(time_now,start_x,start_y,x_range,y_range,level):
                 temp = temp_3
             # 10*10 tiles convert to a png
             myMap[ (y_range-j-1)*size:(y_range-j)*size ,i*size:(i+1)*size   ,: ] = np.array(temp)
-            # position = real_coordinate(tile_x[i],tile_y[j],level)
+            # position = real_coordinate(tile_x[i],tile_y[j],level) 
             # print(position)
     return myMap
 
@@ -405,34 +428,49 @@ timestamp = time.mktime(timeArray)
 # resip = resp.text.split('\r\n')
 # print(resip[0])
 
-time_process_start = int(time.time())
-print("process start:" + time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(time_process_start)))
+def downloadMain(levelParam=14):
+    time_process_start = int(time.time())
+    print("process start:" + time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(time_process_start)))
 
-# 由当前时间生成访问url的时间戳和要保存的文件名
-timestamp,file_name = creat_file_name()
+    # 由当前时间生成访问url的时间戳和要保存的文件名
+    timestamp,file_name = creat_file_name()
 
-# 线程和任务的各个参数
-mapParameter_default14 = [3171,1186,16,2,14]
-level = int(sys.argv[1]) 
-baselevel = 14
-levelup = level - baselevel
-TitleRight = mapParameter_default14[0] * (2**levelup)#12684 25368
-TitleTop = mapParameter_default14[1] * (2**levelup)# 4744 9488
-TileRange = mapParameter_default14[2] * (2**levelup)# 64 128 # 每行/列tiles个数
-threadNum = mapParameter_default14[3] # * (2**levelup)# 32 64 # 8*8 64个线程并行
-mapLevel = mapParameter_default14[4] + levelup# 16 17 # 地图等级
+    # 线程和任务的各个参数
+    mapParameter_default14 = [3171,1186,16,2,14]
+    # level = int(sys.argv[1])
+    level = levelParam 
+    baselevel = 14
+    levelup = level - baselevel
+    TitleRight = mapParameter_default14[0] * (2**levelup)#12684 25368
+    TitleTop = mapParameter_default14[1] * (2**levelup)# 4744 9488
+    TileRange = mapParameter_default14[2] * (2**levelup)# 64 128 # 每行/列tiles个数
+    threadNum = mapParameter_default14[3] # * (2**levelup)# 32 64 # 8*8 64个线程并行
+    mapLevel = mapParameter_default14[4] + levelup# 16 17 # 地图等级
 
 
-if(level <= 17):
-    # 更新线程参数，不能整太多、太频繁，容易被封IP 线程过多会导致[Errno 104] Connection reset by peer
-    if(level == 14):
-        Multi_Thread_DownLoad(timestamp,file_name,TitleRight,TitleTop,TileRange,threadNum,mapLevel)
-    if(level == 16):
-        threadNum = 4
-        Multi_Thread_DownLoad(timestamp,file_name,TitleRight,TitleTop,TileRange,threadNum,mapLevel)
-    if(level == 17):
-        threadNum = 4
-        Multi_Thread_DownLoad(timestamp,file_name,TitleRight,TitleTop,TileRange,threadNum,mapLevel)
+    if(level <= 17):
+        # 更新线程参数，不能整太多、太频繁，容易被封IP 线程过多会导致[Errno 104] Connection reset by peer
+        if(level == 14):
+            Multi_Thread_DownLoad(timestamp,file_name,TitleRight,TitleTop,TileRange,threadNum,mapLevel)
+        if(level == 16):
+            threadNum = 4
+            Multi_Thread_DownLoad(timestamp,file_name,TitleRight,TitleTop,TileRange,threadNum,mapLevel)
+        if(level == 17):
+            threadNum = 4
+            Multi_Thread_DownLoad(timestamp,file_name,TitleRight,TitleTop,TileRange,threadNum,mapLevel)
+    
+    # print(resJsonData)
+    print(len(resJsonData))
+    # num = 0
+    # for item in resJsonData:
+    #     if(item[2]>0):
+    #         num+=1
+    # print(num)
+    jsonData = {
+        'jsonName':file_name,
+        'data':resJsonData
+    }
+    return jsonData
 
     
 
