@@ -50,6 +50,7 @@ import lnglat_mercator_tiles_convertor as convertor
 
 import requests
 import random
+import copy
 
 from urllib.parse import urlparse, parse_qs, parse_qsl
 
@@ -466,10 +467,13 @@ def downloadMain(levelParam=14):
     #     if(item[2]>0):
     #         num+=1
     # print(num)
+    resData = copy.copy(resJsonData)
+    resJsonData.clear()
     jsonData = {
         'jsonName':file_name,
-        'data':resJsonData
+        'data':resData
     }
+    
     return jsonData
 
     
