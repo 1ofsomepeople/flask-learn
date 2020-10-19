@@ -3,10 +3,13 @@
 __pycache__
 .DS_Store
 
+# 虚拟环境
 .env
+/flask-env
+flask-env
 
+# 数据库
 *.db
 
-/flask-env
-
+# 下载的百度拥堵图片
 *.png
