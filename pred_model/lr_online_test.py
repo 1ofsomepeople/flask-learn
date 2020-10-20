@@ -9,7 +9,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 # from transform_dataset import TrafficData
-
+import random
+import numpy as np
 
 class OneHotProcess(nn.Module):
     def __init__(self, in_dim, hid_c):
@@ -76,3 +77,20 @@ def test(test_data):
 #     test_data = torch.cat((test_set[0]["x"].unsqueeze(0), test_set[1]["x"].unsqueeze(0)), dim=0)
 #     prediction = test(test_data)
 #     print(prediction.size())
+
+def mockData():
+    # 生成17531*12的二维数组
+    timeData = [[random.randrange(20,61,20) for col in range(12)] for row in range(17531)]
+    tensorData = torch.Tensor(timeData).unsqueeze(0).long()
+    print(tensorData.size())
+    print(tensorData.type())
+    return tensorData
+
+# if __name__ == '__main__':
+#     tensorData = mockData()
+#     prediction = test(tensorData)
+#     print(prediction.size())
+#     resultIndexList = torch.max(prediction[0],1)[1].numpy().tolist()
+#     for i in range(len(resultIndexList)):
+#         resultIndexList[i] = 20 + resultIndexList[i]*20
+#     print(resultIndexList)
