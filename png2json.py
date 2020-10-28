@@ -9,12 +9,15 @@ def readpoints():
     tilePoint = {}
     with open(pointsFile, 'r') as f:
         data = json.load(f).get('wgs84points')
+
+    # print('readpoints'+ str(len(data)))
     for point in data:
         # point[0] = round(point[0],6)
-        # point[1] = round(point[0],6)
+        # point[1] = round(point[1],6)
         lng_BD09,lat_BD09 = convertor.wgs84_to_bd09(point[0], point[1])
         pointX,pointY = convertor.BD092mercotor(lng_BD09,lat_BD09)
         tileX,tileY,pixelX,pixelY = convertor.point2tiles_pixel(pointX,pointY,14)
+
         tileName = str(tileX)+str(tileY)
         if(tileName in tilePoint.keys()):
             tilePoint[tileName].append([pixelX,pixelY,point[0],point[1]])

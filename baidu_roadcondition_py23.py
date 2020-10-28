@@ -56,12 +56,18 @@ from urllib.parse import urlparse, parse_qs, parse_qsl
 
 import png2json as png2json
 
-
+# tilePoint是从points.json中读取的点数据
 tilePoint = png2json.readpoints()
-# print(tilePoint['31621178'])
+# resJsonData结果的jsondata
 resJsonData = []
+
 # show tile pictures 256*256
 def showBmap(my_url):
+
+    # 引用全局变量    
+    global resJsonData
+    global tilePoint
+
     size = 256
 
     # 随便选一个代理ip
@@ -87,100 +93,21 @@ def showBmap(my_url):
     tileName = str(tile_x)+str(tile_y)
 
     if(tileName in tilePoint.keys()):
-    #     # print(tileName)
         tempArr = tilePoint[tileName]
         for temppoint in tempArr:    
-            if(temppoint[0] < 256 and temppoint[1] < 256):
-                R,G,B = img.getpixel((temppoint[0],255-temppoint[1]))
-                if(R+G+B>0):
-                    # RGB归一化 消除光照影响
-                    r = R / (R+G+B)
-                    g = G / (R+G+B) 
-                    b = 1 - r - g
-                    value = png2json.RGB2Value(r,g,b)
-                    if(value == 0):
-                        value = 3
-                    resJsonData.append([temppoint[2],temppoint[3],value])
-    return img
+            R,G,B = img.getpixel((temppoint[0], 255-temppoint[1]))
+            if(R+G+B>0):
+                # RGB归一化 消除光照影响
+                r = R / (R+G+B)
+                g = G / (R+G+B) 
+                b = 1 - r - g
+                value = png2json.RGB2Value(r,g,b)
 
-# degree of longitude 经度 latitude 纬度    
-# OpenStreetMap经纬度转行列号 不准确的 OpenStreetMap用的是WGS84 百度用的是BD09
-# OpenStreetMap use WGS84, Baidu use BD09
-def deg2num_pixel(lat_deg, lon_deg, zoom):
-    lat_rad = math.radians(lat_deg) # 返回一个角度的弧度值
-    n = 2.0 ** zoom # 乘方
-    xtile = int((lon_deg + 180.0) / 360.0 * n)
-    ytile = int((1.0 - math.log(math.tan(lat_rad) + (1 / math.cos(lat_rad))) / math.pi) / 2.0 * n)
-    xpixel = int(((lon_deg + 180.0) / 360.0 * n)*256%256 + 1/2)
-    ypixel = int((1.0 - math.log(math.tan(lat_rad) + (1 / math.cos(lat_rad))) / math.pi) / 2.0 * n  *256%256+1/2 )
-    return (xtile, ytile ,xpixel,ypixel)
-def real_coordinate(lat_deg,lon_deg,level):
-    (xtile, ytile ,xpixel,ypixel) = deg2num_pixel(lat_deg, lon_deg, level)
-    start_x = 3168
-    start_y = 1183
-    real_coordinate_x = (ytile - start_y) * size + ypixel
-    real_coordinate_y = (xtile - start_x) * size + xpixel 
-    return(real_coordinate_x,real_coordinate_y)
-
-# 加密解密算法函数和参数
-# encryption and decryption function and parameters
-xu = 6370996.81
-Sp = [1.289059486E7, 8362377.87, 5591021, 3481989.83, 1678043.12, 0]
-Hj = [75, 60, 45, 30, 15, 0]
-Au = [[1.410526172116255E-8, 8.98305509648872E-6, -1.9939833816331, 200.9824383106796, -187.2403703815547, 91.6087516669843, -23.38765649603339, 2.57121317296198, -0.03801003308653, 1.73379812E7], [ - 7.435856389565537E-9, 8.983055097726239E-6, -0.78625201886289, 96.32687599759846, -1.85204757529826, -59.36935905485877, 47.40033549296737, -16.50741931063887, 2.28786674699375, 1.026014486E7], [ - 3.030883460898826E-8, 8.98305509983578E-6, 0.30071316287616, 59.74293618442277, 7.357984074871, -25.38371002664745, 13.45380521110908, -3.29883767235584, 0.32710905363475, 6856817.37], [ - 1.981981304930552E-8, 8.983055099779535E-6, 0.03278182852591, 40.31678527705744, 0.65659298677277, -4.44255534477492, 0.85341911805263, 0.12923347998204, -0.04625736007561, 4482777.06], [3.09191371068437E-9, 8.983055096812155E-6, 6.995724062E-5, 23.10934304144901, -2.3663490511E-4, -0.6321817810242, -0.00663494467273, 0.03430082397953, -0.00466043876332, 2555164.4], [2.890871144776878E-9, 8.983055095805407E-6, -3.068298E-8, 7.47137025468032, -3.53937994E-6, -0.02145144861037, -1.234426596E-5, 1.0322952773E-4, -3.23890364E-6, 826088.5]]
-Qp = [[- 0.0015702102444, 111320.7020616939, 1704480524535203, -10338987376042340, 26112667856603880, -35149669176653700, 26595700718403920, -10725012454188240, 1800819912950474, 82.5], [8.277824516172526E-4, 111320.7020463578, 6.477955746671607E8, -4.082003173641316E9, 1.077490566351142E10, -1.517187553151559E10, 1.205306533862167E10, -5.124939663577472E9, 9.133119359512032E8, 67.5], [0.00337398766765, 111320.7020202162, 4481351.045890365, -2.339375119931662E7, 7.968221547186455E7, -1.159649932797253E8, 9.723671115602145E7, -4.366194633752821E7, 8477230.501135234, 52.5], [0.00220636496208, 111320.7020209128, 51751.86112841131, 3796837.749470245, 992013.7397791013, -1221952.21711287, 1340652.697009075, -620943.6990984312, 144416.9293806241, 37.5], [ - 3.441963504368392E-4, 111320.7020576856, 278.2353980772752, 2485758.690035394, 6070.750963243378, 54821.18345352118, 9540.606633304236, -2710.55326746645, 1405.483844121726, 22.5], [ - 3.218135878613132E-4, 111320.7020701615, 0.00369383431289, 823725.6402795718, 0.46104986909093, 2351.343141331292, 1.58060784298199, 8.77738589078284, 0.37238884252424, 7.45]]
-
-def Convertor(x,y,arr):
-    pass
-    x_temp = arr[0] + arr[1]*abs(x)
-    y_temp = abs(y)/arr[9]
-    y_temp1 = arr[2] + arr[3]*y_temp + arr[4]*y_temp*y_temp + arr[5]*y_temp*y_temp*y_temp + arr[6]*y_temp*y_temp*y_temp*y_temp + arr[7]*y_temp*y_temp*y_temp*y_temp*y_temp + arr[8]*y_temp*y_temp*y_temp*y_temp*y_temp*y_temp
-    # c = c * (0 > a.lng ? -1 : 1) ternary operator of python like that:
-    # python中的三元运算符写法：
-    x_Converted = x_temp * (-1 if(0 > x) else 1)
-    y_Converted = y_temp1 * (-1 if(0 > y) else 1)
-    return[x_Converted,y_Converted]
-
-# BD09经纬度和墨卡托投影的平面坐标的相互转换函数
-# the convert function of longitude and latitude degree of BD09 and  plane coordinates of Mercator projection 
-def BD092mercotor(lng_BD09,lat_BD09):
-    arr = []
-    lat_abs = abs(lat_BD09)
-    for i in range(len(Hj)):
-        if (lat_abs >= Hj[i]):
-            arr = Qp[i]
-            break
-    res = Convertor(lng_BD09,lat_BD09,arr)
-    pointX = round(res[0],1)
-    pointY = round(res[1],1)
-    return (pointX,pointY)
-def mercator2BD09(pointX,pointY):
-    arr = []
-    pointYabs = abs(pointY)
-    for i in range(len(Sp)):
-        if (pointYabs >= Sp[i]):
-            arr = Au[i]
-            break
-    res = Convertor(pointX,pointY,arr)
-    lng_BD09 = round(res[0],6)
-    lat_BD09 = round(res[1],6)
-    return (lng_BD09,lat_BD09)
-
-# 平面坐标（pointX, pointY）转瓦片坐标（tileX， tileY）和瓦片中的像素坐标（pixelX, pixelY）
-# plane coordinates（pointX, pointY）convert to tile coordinates（tileX， tileY）and pixel coordinates（pixelX, pixelY）in tiles
-def point2tiles_pixel(pointX,pointY,level):
-    tileX = int(pointX * (2 ** (level - 18)) / 256)
-    tileY = int(pointY * (2 ** (level - 18)) / 256)
-    pixelX = int(pointX * (2 ** (level - 18)) - tileX * 256 + 0.5)
-    pixelY = int(pointY * (2 ** (level - 18)) - tileY * 256 + 0.5)
-    return(tileX,tileY,pixelX,pixelY)
-# 瓦片（tileX， tileY）和像素坐标（pixelX, pixelY）转平面坐标（pointX, pointY）
-# tile coordinates（tileX， tileY）and pixel coordinates（pixelX, pixelY）in tiles convert to plane coordinates（pointX, pointY）
-def tiles_pixel2point(tileX, tileY, pixelX, pixelY, level):
-    pointX = round(((tileX * 256 + pixelX) / (2 ** (level - 18))),1)
-    pointY = round(((tileY * 256 + pixelY) / (2 ** (level - 18))),1)
-    return(pointX,pointY) 
-    
+                resJsonData.append([temppoint[2],temppoint[3],value])
+            else:
+                # print('RGB和不大于0',tileName,temppoint,R,G,B)
+                resJsonData.append([temppoint[2],temppoint[3],0])
+    return img 
 
 def down_a_map(time_now,start_x,start_y,x_range,y_range,level):
 
@@ -209,6 +136,9 @@ def down_a_map(time_now,start_x,start_y,x_range,y_range,level):
             url_ij = address+('level=%d&x=%d&y=%d&time=%d')%(level,tile_x[i],tile_y[j],time_now)
             # print(url_ij)
             temp = showBmap(url_ij)
+
+            # 存图功能-下载瓦片地图的图片RGB矩阵
+            '''
             # if url_ij can be convert to RGB, temp.size = (256,256)
             # print(temp.size)
             # If this tile is empty, there is no way in picture. 
@@ -224,6 +154,7 @@ def down_a_map(time_now,start_x,start_y,x_range,y_range,level):
             myMap[ (y_range-j-1)*size:(y_range-j)*size ,i*size:(i+1)*size   ,: ] = np.array(temp)
             # position = real_coordinate(tile_x[i],tile_y[j],level) 
             # print(position)
+            ''' 
     return myMap
 
 
@@ -364,6 +295,9 @@ def Multi_Thread_DownLoad(timestamp,file_name,TitleRight,TitleTop,TileRange,thre
     print("download time:" + str(time_merge_start-time_download_start))
     print("merge start:" + time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(time_merge_start)))
 
+
+    # 存图功能-merge图片的矩阵
+    ''' 
     ssListForhstack = []
     ssListForVstack = []
 
@@ -377,6 +311,8 @@ def Multi_Thread_DownLoad(timestamp,file_name,TitleRight,TitleTop,TileRange,thre
         else:
             ssListForhstack.append(ssList[index].get_result())
     ssListForVstack.append(np.concatenate((ssListForhstack[:]), axis=1))
+    '''
+
     # temp = np.hstack((temp, ssList[index-i].get_result()))
     # temp = np.concatenate((temp, ssList[index-i].get_result()), axis=1)
     # 用concatenate优化vstack和hstack，可以加速矩阵的合并操作
@@ -387,7 +323,8 @@ def Multi_Thread_DownLoad(timestamp,file_name,TitleRight,TitleTop,TileRange,thre
     print("merge stage 1 finished:" + time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(time_merge_stage1)))
     print("merge stage 1 time:" + str(time_merge_stage1-time_merge_start))
 
-    concatenateSave(ssListForVstack,file_name)
+    # 存图功能-保存merge后的图片
+    # concatenateSave(ssListForVstack,file_name)
 
     time_finish = int(time.time())
     print("finish start:" + time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(time_finish)))
@@ -430,6 +367,10 @@ timestamp = time.mktime(timeArray)
 # print(resip[0])
 
 def downloadMain(levelParam=14):
+
+    # 引用全局变量    
+    global resJsonData
+
     time_process_start = int(time.time())
     print("process start:" + time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(time_process_start)))
 
@@ -460,15 +401,12 @@ def downloadMain(levelParam=14):
             threadNum = 4
             Multi_Thread_DownLoad(timestamp,file_name,TitleRight,TitleTop,TileRange,threadNum,mapLevel)
     
-    # print(resJsonData)
+
     print(len(resJsonData))
-    # num = 0
-    # for item in resJsonData:
-    #     if(item[2]>0):
-    #         num+=1
-    # print(num)
+
     resData = copy.copy(resJsonData)
     resJsonData.clear()
+
     jsonData = {
         'jsonName':file_name,
         'data':resData

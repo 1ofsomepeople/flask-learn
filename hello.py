@@ -13,7 +13,7 @@ CORS(app, supports_credentials=True)
 @app.route("/")
 def hello():
     return "Hello World1!"
- 
+
 @app.route('/data/')
 def getRealTimeData():
 
@@ -28,7 +28,7 @@ def getRealTimeData():
     # for root, dirs, files in os.walk(os.getcwd()): 
     #     print(root) #当前目录路径 
     #     print(files) #当前路径下所有非目录子文件
-    
+    print('res'+str(len(dataObj['data'])))
     return jsonify(dataObj)
 
 if __name__ == "__main__":

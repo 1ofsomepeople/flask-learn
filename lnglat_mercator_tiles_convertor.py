@@ -31,6 +31,7 @@ def Convertor(x,y,arr):
     y_Converted = y_temp1 * (-1 if(0 > y) else 1)
     return[x_Converted,y_Converted]
 
+# https://blog.csdn.net/qq_16664325/article/details/67639684 百度地图像素点与经纬度二三事（二）百度墨卡托转BD09
 # BD09经纬度和墨卡托投影的平面坐标的相互转换函数
 # the convert function of longitude and latitude degree of BD09 and  plane coordinates of Mercator projection 
 def BD092mercotor(lng_BD09,lat_BD09):
@@ -59,11 +60,19 @@ def mercator2BD09(pointX,pointY):
 # 平面坐标（pointX, pointY）转瓦片坐标（tileX， tileY）和瓦片中的像素坐标（pixelX, pixelY）
 # plane coordinates（pointX, pointY）convert to tile coordinates（tileX， tileY）and pixel coordinates（pixelX, pixelY）in tiles
 def point2tiles_pixel(pointX,pointY,level=14):
-	tileX = int(pointX * (2 ** (level - 18)) / 256)
-	tileY = int(pointY * (2 ** (level - 18)) / 256)
-	pixelX = int(pointX * (2 ** (level - 18)) - tileX * 256 + 0.5)
-	pixelY = int(pointY * (2 ** (level - 18)) - tileY * 256 + 0.5)
-	return(tileX,tileY,pixelX,pixelY)
+    tileX = int(pointX * (2 ** (level - 18)) / 256)
+    tileY = int(pointY * (2 ** (level - 18)) / 256)
+    pixelX = int(pointX * (2 ** (level - 18)) - tileX * 256 + 0.5)
+    pixelY = int(pointY * (2 ** (level - 18)) - tileY * 256 + 0.5)
+    if(pixelX>=256):
+        # print(pointX,pointY,tileX,tileY,pixelX,pixelY,'convertor_68')
+        tileX = tileX + 1
+        pixelX = pixelX - 256
+    if(pixelY>=256):
+        # print(pointX,pointY,tileX,tileY,pixelX,pixelY,'convertor_72')
+        tileY = tileY + 1
+        pixelY = pixelY - 256
+    return(tileX,tileY,pixelX,pixelY)
 # 瓦片（tileX， tileY）和像素坐标（pixelX, pixelY）转平面坐标（pointX, pointY）
 # tile coordinates（tileX， tileY）and pixel coordinates（pixelX, pixelY）in tiles convert to plane coordinates（pointX, pointY）
 def tiles_pixel2point(tileX, tileY, pixelX, pixelY, level=14):
@@ -120,8 +129,9 @@ def deg2num_pixel(lat_deg, lon_deg, zoom):
     return (xtile, ytile ,xpixel,ypixel)
 def real_coordinate(lat_deg,lon_deg,level):# 真实坐标
     (xtile, ytile ,xpixel,ypixel) = deg2num_pixel(lat_deg, lon_deg, level)
-    start_x = 3168
-    start_y = 1183
+    start_x = 3171
+    start_y = 1186
+    size = 256
     real_coordinate_x = (ytile - start_y) * size + ypixel
     real_coordinate_y = (xtile - start_x) * size + xpixel 
     return(real_coordinate_x,real_coordinate_y)
@@ -210,3 +220,19 @@ def bd09_to_wgs84(bd_lon, bd_lat):
 def wgs84_to_bd09(lon, lat):
     lon, lat = wgs84_to_gcj02(lon, lat)
     return gcj02_to_bd09(lon, lat)
+
+# gcj02lnglat = (116.395705935264,39.9073249605712)
+# wgs84lnglat = gcj02_to_wgs84(*gcj02lnglat)
+# gcj02lnglat2 = wgs84_to_gcj02(*wgs84lnglat)
+# bd09lnglat = wgs84_to_bd09(*wgs84lnglat)
+# wgs84lnglat2 = bd09_to_wgs84(*bd09lnglat)
+# bd9mcPoints = BD092mercotor(*bd09lnglat)
+# bd09lnglat2 = mercator2BD09(*bd9mcPoints)
+# tile_pixel = point2tiles_pixel(*bd9mcPoints,14)
+# bd9mcPoints2 = tiles_pixel2point(*tile_pixel,14)
+# bd09lnglat3 = mercator2BD09(*bd9mcPoints2)
+
+# print(gcj02lnglat,gcj02lnglat2)
+# print(wgs84lnglat,wgs84lnglat2)
+# print(bd09lnglat,bd09lnglat2,bd09lnglat3)
+# print(bd9mcPoints,bd9mcPoints2)
