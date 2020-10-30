@@ -22,3 +22,11 @@ pip freeze >requirements.txt
 将项目依赖导入
 pip install -r requirements.txt
 安装项目依赖
+
+# 4. 项目运行和查看
+https://www.cnblogs.com/baby123/p/6477429.html
+nohup后台运行
+nohup python hello.py > ~/project/output.log 2>&1 &
+项目进程查看
+jobs -l 
+ps -aux|grep python 
