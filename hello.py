@@ -44,9 +44,9 @@ app.config.from_object(SchedulerConfig())
 def hello():
     return "Hello World1!"
 
+# load当前拥堵数据
 @app.route('/data/')
 def getRealTimeData():
-
     dataObj = {}
     for file in os.listdir():
         if(file.endswith(".png")):
@@ -54,8 +54,20 @@ def getRealTimeData():
             os.remove(file_path)
 
     dataObj = download.downloadMain()
-    # print('res'+str(len(dataObj['data'])))
+    print('res'+str(len(dataObj['data'])))
+    return jsonify(dataObj)
 
+# 由dataCsv中的数据经过模型预测生成预测拥堵数据
+@app.route('/data/predict/lr/')
+def getPredictDataLr():
+    dataObj = {}
+    dataObj = datacsv.lr_pred()
+    return jsonify(dataObj)
+
+@app.route('/data/predict/sage/')
+def getPredictDataSage():
+    dataObj = {}
+    dataObj = datacsv.sage_pred()
     return jsonify(dataObj)
 
 if __name__ == "__main__":

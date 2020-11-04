@@ -11,6 +11,8 @@ import torch.backends.cudnn as cudnn
 # from transform_dataset import TrafficData
 import random
 import numpy as np
+import pandas as pd
+import os
 
 class OneHotProcess(nn.Module):
     def __init__(self, in_dim, hid_c):
@@ -54,6 +56,11 @@ def test(test_data):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     file_name = "lr.pkl"
+    path=os.path.abspath('.')   #表示执行环境的绝对路径
+    if(os.path.split(path)[-1] == 'pred_model'):
+        file_name = os.path.join(path,'lr.pkl')
+    elif(os.path.split(path)[-1] == 'flask-learn'):
+        file_name = os.path.join(path,'pred_model','lr.pkl')
 
     checkpoint = torch.load(file_name, device)
     model_para = checkpoint["model"]
@@ -86,11 +93,25 @@ def mockData():
     print(tensorData.type())
     return tensorData
 
+# 加载用于模型预测的数据
+def loadDataForPred():
+    # 读csv，生成dataFrame
+    readCsv = pd.read_csv('../data.csv')
+    # 经纬度的pointindex数组
+    pointsIndex = np.array(readCsv.values)[:,0].tolist()
+
+    dataForPred = np.array(readCsv.values)[:,-12:].tolist()
+    tensorData = torch.Tensor(dataForPred).unsqueeze(0).long()
+    print(tensorData.size())
+    print(tensorData.type())
+    return tensorData
+
 # if __name__ == '__main__':
-#     tensorData = mockData()
-#     prediction = test(tensorData)
-#     print(prediction.size())
-#     resultIndexList = torch.max(prediction[0],1)[1].numpy().tolist()
-#     for i in range(len(resultIndexList)):
-#         resultIndexList[i] = 20 + resultIndexList[i]*20
-#     print(resultIndexList)
+    # tensorData = loadDataForPred()
+    # tensorData = mockData()
+    # prediction = test(tensorData)
+    # print(prediction.size())
+    # resultIndexList = torch.max(prediction[0],1)[1].numpy().tolist()
+    # for i in range(len(resultIndexList)):
+    #     resultIndexList[i] = 20 + resultIndexList[i]*20
+    # print(resultIndexList)

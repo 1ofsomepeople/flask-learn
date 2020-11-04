@@ -2,9 +2,12 @@ import json
 import csv
 import numpy as np
 import pandas as pd
+import torch
+import pred_model.lr_online_test as lrmodel
+import pred_model.sage_online_test as sagemodel
+import time
+import datetime
 
-# 要输入预测模型的dataArray
-# dataArray = []
 # 经纬度相对应的index数组
 # pointsIndex = []
 
@@ -31,7 +34,7 @@ def createCsv(testjsonName,testdata):
         lat = str(point[1])
         lonlat = lon+'-'+lat
         pointIndex.append(lonlat)
-        value = point[2]
+        value = 20
         if(point[2] == 3):
             value = 20
         elif(point[2] == 7):
@@ -52,20 +55,22 @@ def appendData(dataname,data):
     # 经纬度的pointindex数组
     pointsIndex = np.array(readCsv.values)[:,0].tolist()
     # 要插入的value数组
-    valueList = [0]*len(pointsIndex)
+    valueList = [20]*len(pointsIndex)
     for point in data:
         lon = str(point[0])
         lat = str(point[1])
         lonlat = lon+'-'+lat
-        value = point[2]
+        value = 20
         if(point[2] == 3):
             value = 20
+            continue
         elif(point[2] == 7):
             value = 40
         elif(point[2] == 10):
             value = 60
         else:
             value = 20
+            continue
         index = pointsIndex.index(lonlat)
         valueList[index] = value
     # csv列的长度
@@ -74,3 +79,72 @@ def appendData(dataname,data):
     if(csv_columns_length>=16):
         readCsv.drop(readCsv.columns[1], axis=1, inplace=True)
     readCsv.to_csv('data.csv',index=0,encoding='gbk')
+
+# 加载用于模型预测的数据
+def loadDataForPred():
+    # 读csv，生成dataFrame
+    readCsv = pd.read_csv('data.csv')
+    # 经纬度的pointindex数组
+    pointsIndex = np.array(readCsv.values)[:,0].tolist()
+
+    # 最后一列的列名，时间
+    lastColumnName = readCsv.columns.values.tolist()[-1]
+    # 转换为时间数组 strptime()
+    timeArray = time.strptime(lastColumnName, "%Y-%m-%d_%H-%M-%S")
+    # 转换为时间戳 mktime()
+    timeStamp = int(time.mktime(timeArray)) + 60*5
+    # 时间戳转时间字符串
+    predictTime = datetime.datetime.fromtimestamp(timeStamp)
+    predictTime = predictTime.strftime("%Y-%m-%d_%H-%M-%S")
+
+    dataForPred = np.array(readCsv.values)[:,-12:].tolist()
+    tensorData = torch.Tensor(dataForPred).unsqueeze(0).long()
+    # print(tensorData.size())
+    # print(tensorData.type())
+    return (predictTime,pointsIndex,tensorData)
+
+# 使用lr方法预测
+def lr_pred():
+    (predictTime,pointsIndex,tensorData) = loadDataForPred()
+    prediction = lrmodel.test(tensorData)
+    print(prediction.size())
+    resultIndexList = torch.max(prediction[0],1)[1].numpy().tolist()
+    for i in range(len(resultIndexList)):
+        # resultIndexList[i] = 20 + resultIndexList[i]*20
+        [lon,lat] = pointsIndex[i].split('-')
+        lon = float(lon)
+        lat = float(lat)
+        value = 3
+        if(resultIndexList[i] == 1):
+            value = 7
+        elif(resultIndexList[i] == 2):
+            value = 10
+        resultIndexList[i] = [lon,lat,value]
+    predObj = {
+        "jsonName":predictTime,
+        "data":resultIndexList
+    }
+    return predObj
+
+# 使用sage方法预测
+def sage_pred():
+    (predictTime,pointsIndex,tensorData) = loadDataForPred()
+    prediction = sagemodel.test(tensorData)
+    print(prediction.size())
+    resultIndexList = torch.max(prediction[0],1)[1].numpy().tolist()
+    for i in range(len(resultIndexList)):
+        # resultIndexList[i] = 20 + resultIndexList[i]*20
+        [lon,lat] = pointsIndex[i].split('-')
+        lon = float(lon)
+        lat = float(lat)
+        value = 3
+        if(resultIndexList[i] == 1):
+            value = 7
+        elif(resultIndexList[i] == 2):
+            value = 10
+        resultIndexList[i] = [lon,lat,value]
+    predObj = {
+        "jsonName":predictTime,
+        "data":resultIndexList
+    }
+    return predObj
