@@ -15,10 +15,10 @@ import datetime
 # 返回值：(jsonName,data)
 # jsonName：表示日期的string
 # data：17531个点的数组，[[lon,lat,value],...]
-def readtestdata():
+def readtestdata(path = './tempdata.json'):
     jsonName = ''
     data = []
-    with open('./tempdata.json', 'r') as f:
+    with open(path, 'r') as f:
         # jsonName = json.load(f).get('jsonName')
         datajson = json.load(f)
     jsonName = datajson['jsonName']
