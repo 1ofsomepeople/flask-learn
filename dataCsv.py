@@ -49,7 +49,10 @@ def createCsv(testjsonName,testdata):
     initCsv.to_csv('data.csv',index=0,encoding='gbk')
 
 # 将json的data插入csv中
-def appendData(dataname,data):
+# dataname：列名，json数据日期string
+# data：一列数据，值为1,3,7,10,在此函数中映射到20 40 60
+# max：表的最大数据列数，当超过max组数据被插入的时候删除第一列数据,当max=-1时不删除第一列
+def appendData(dataname,data,max=16):
     # 读csv，生成dataFrame
     readCsv = pd.read_csv('data.csv')
     # 经纬度的pointindex数组
@@ -76,7 +79,7 @@ def appendData(dataname,data):
     # csv列的长度
     csv_columns_length = readCsv.shape[1]
     readCsv.insert(csv_columns_length,dataname,valueList,allow_duplicates=True)
-    if(csv_columns_length>=16):
+    if(max != -1 and csv_columns_length >= max):
         readCsv.drop(readCsv.columns[1], axis=1, inplace=True)
     readCsv.to_csv('data.csv',index=0,encoding='gbk')
 

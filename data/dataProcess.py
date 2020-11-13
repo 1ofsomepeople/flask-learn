@@ -38,15 +38,18 @@ def readJsonData(dirPath,fileName):
     data = datajson['data']
     return (jsonName,data)
 
-# 文件的目录路径
-dataDirPath = getOrinDataDirPath()
-# 目录下所有文件名的list
-fileList = os.listdir(dataDirPath)
+# 根据一系列json数据文件生成数据表data.csv
+# 生成data.csv文件
+def getDataCsv():
+    # 文件的目录路径
+    dataDirPath = getOrinDataDirPath()
+    # 目录下所有文件名的list
+    fileList = os.listdir(dataDirPath)
 
-jsonName,data = readJsonData(dataDirPath,fileList[0])
+    jsonName,data = readJsonData(dataDirPath,fileList[0])
 
-datacsv.createCsv(jsonName,data)
+    datacsv.createCsv(jsonName,data)
 
-for index in range(1,len(fileList)):
-    jsonName,data = readJsonData(dataDirPath,fileList[index])
-    datacsv.appendData(jsonName,data)
+    for index in range(1,len(fileList)):
+        jsonName,data = readJsonData(dataDirPath,fileList[index])
+        datacsv.appendData(jsonName,data,-1)
