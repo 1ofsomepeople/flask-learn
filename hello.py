@@ -1,11 +1,12 @@
 import os
 import sys
 
-from flask import Flask, render_template, url_for, jsonify
+from flask import Flask, render_template, url_for, jsonify, request
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy # 导入扩展类
 import baidu_roadcondition_py23 as download
 import dataCsv as datacsv
+import data.dataProcess as dataProcess
 
 from flask_apscheduler import APScheduler # 引入APScheduler
 import time
@@ -40,11 +41,20 @@ CORS(app, supports_credentials=True)  # 解决跨域问题
 #为实例化的flask引入定时任务配置
 app.config.from_object(SchedulerConfig())
 
+# 解析请求url的参数
+def request_parse(req_data):
+	# 解析请求数据并以json形式返回
+    if(req_data.method) == 'POST':
+        data = req_data.json
+    elif(req_data.method) == 'GET':
+        data = req_data.args
+    return data
+
 @app.route("/")
 def hello():
     return "Hello World1!"
 
-# load当前拥堵数据
+# load当前时间的实时拥堵数据
 @app.route('/data/')
 def getRealTimeData():
     dataObj = {}
@@ -68,6 +78,28 @@ def getPredictDataLr():
 def getPredictDataSage():
     dataObj = {}
     dataObj = datacsv.sage_pred()
+    return jsonify(dataObj)
+
+@app.route('/data/history/gt/')
+def getHistoryDataGt():
+    dataObj = {}
+    dataObj = dataProcess.getGtData()
+    return jsonify(dataObj)
+
+@app.route('/data/history/pred/', methods = ["GET","POST"])   # GET 和 POST 都可以
+def getHistoryDataPred():
+    
+    # 解析接口url的参数
+    paramData = request_parse(request)
+    # 假设有如下 URL
+    # http://10.8.54.48:5000/index?name=john&age=20
+    # name = data.get("name")
+    # age = data.get("age")
+    dataIndex = int(paramData.get("dataIndex"))
+    predictType = str(paramData.get("predictType"))
+
+    dataObj = {}
+    dataObj = dataProcess.getPredData(dataIndex,predictType)
     return jsonify(dataObj)
 
 if __name__ == "__main__":

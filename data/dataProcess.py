@@ -53,3 +53,85 @@ def getDataCsv():
     for index in range(1,len(fileList)):
         jsonName,data = readJsonData(dataDirPath,fileList[index])
         datacsv.appendData(jsonName,data,-1)
+
+# 加载用于模型预测的数据
+def loadDataForPred(index = 0, dataType = 'gt'):
+    # index超出阈值的处理
+    index = index % 10
+
+    file_name = 'data.csv'
+    path=os.path.abspath('.')   #表示执行环境的绝对路径
+    if(os.path.split(path)[-1] == 'data'):
+        file_name = os.path.join(path,'data.csv')
+    elif(os.path.split(path)[-1] == 'flask-learn'):
+        file_name = os.path.join(path,'data','data.csv')
+    # 读csv，生成dataFrame
+    readCsv = pd.read_csv(file_name)
+    # 经纬度的pointindex数组
+    pointsIndex = np.array(readCsv.values)[:,0].tolist()
+
+    # 每隔5列 选取数据
+    selectData = np.array(readCsv.values)[:, index+1::5]
+    # 前12列数据 用于预测
+    dataForPred = selectData[:,0:12:1].tolist()
+    # 第13列数据 预测结果的groundTruth
+    dataGroudTruth = selectData[:,12].tolist()
+    # 预测的时间
+    predictTime = readCsv.columns.values.tolist()[index-10]
+
+    if(dataType == 'gt'):
+        return (predictTime,pointsIndex,dataGroudTruth)
+    else:
+        tensorData = torch.Tensor(dataForPred).unsqueeze(0).long()
+        # # print(tensorData.size())
+        # # print(tensorData.type())
+        return (predictTime,pointsIndex,tensorData)
+
+# 获取gt数据object
+def getGtData(inputDataIndex = 0):
+    (predictTime,pointsIndex,dataGroudTruth) = loadDataForPred(inputDataIndex,'gt')
+
+    for i in range(len(dataGroudTruth)):
+        [lon,lat] = pointsIndex[i].split('-')
+        lon = float(lon)
+        lat = float(lat)
+        value = 3
+        if(dataGroudTruth[i] == 40):
+            value = 7
+        elif(dataGroudTruth[i] == 60):
+            value = 10
+        dataGroudTruth[i] = [lon,lat,value]
+    resObj = {
+        "jsonName":predictTime,
+        "data":dataGroudTruth
+    }
+    return resObj
+
+# 获取pred数据object
+def getPredData(inputDataIndex = 0, method = 'lr'):
+    (predictTime,pointsIndex,tensorData) = loadDataForPred(inputDataIndex,'pred')
+
+    prediction = None
+    if(method == 'lr'):
+        prediction = lrmodel.test(tensorData)
+    elif(method == 'sage'):
+        prediction = sagemodel.test(tensorData)
+    print(prediction.size())
+
+    resultIndexList = torch.max(prediction[0],1)[1].numpy().tolist()
+
+    for i in range(len(resultIndexList)):
+        [lon,lat] = pointsIndex[i].split('-')
+        lon = float(lon)
+        lat = float(lat)
+        value = 3
+        if(resultIndexList[i] == 1):
+            value = 7
+        elif(resultIndexList[i] == 2):
+            value = 10
+        resultIndexList[i] = [lon,lat,value]
+    predObj = {
+        "jsonName":predictTime,
+        "data":resultIndexList
+    }
+    return predObj
