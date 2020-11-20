@@ -71,19 +71,23 @@ def getRealTimeData():
 @app.route('/data/predict/lr/')
 def getPredictDataLr():
     dataObj = {}
-    dataObj = datacsv.lr_pred()
+    dataObj = datacsv.getPred('lr')
     return jsonify(dataObj)
 
 @app.route('/data/predict/sage/')
 def getPredictDataSage():
     dataObj = {}
-    dataObj = datacsv.sage_pred()
+    dataObj = datacsv.getPred('sage')
     return jsonify(dataObj)
 
-@app.route('/data/history/gt/')
+@app.route('/data/history/gt/', methods = ["GET","POST"])
 def getHistoryDataGt():
+    # 解析接口url的参数
+    paramData = request_parse(request)
+    dataIndex = int(paramData.get("dataIndex"))
+
     dataObj = {}
-    dataObj = dataProcess.getGtData()
+    dataObj = dataProcess.getGtData(dataIndex)
     return jsonify(dataObj)
 
 @app.route('/data/history/pred/', methods = ["GET","POST"])   # GET 和 POST 都可以

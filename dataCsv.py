@@ -106,33 +106,15 @@ def loadDataForPred():
     # print(tensorData.type())
     return (predictTime,pointsIndex,tensorData)
 
-# 使用lr方法预测
-def lr_pred():
+def getPred(type='lr'):
     (predictTime,pointsIndex,tensorData) = loadDataForPred()
-    prediction = lrmodel.test(tensorData)
-    print(prediction.size())
-    resultIndexList = torch.max(prediction[0],1)[1].numpy().tolist()
-    for i in range(len(resultIndexList)):
-        # resultIndexList[i] = 20 + resultIndexList[i]*20
-        [lon,lat] = pointsIndex[i].split('-')
-        lon = float(lon)
-        lat = float(lat)
-        value = 3
-        if(resultIndexList[i] == 1):
-            value = 7
-        elif(resultIndexList[i] == 2):
-            value = 10
-        resultIndexList[i] = [lon,lat,value]
-    predObj = {
-        "jsonName":predictTime,
-        "data":resultIndexList
-    }
-    return predObj
-
-# 使用sage方法预测
-def sage_pred():
-    (predictTime,pointsIndex,tensorData) = loadDataForPred()
-    prediction = sagemodel.test(tensorData)
+    prediction = None
+    # 使用lr方法预测
+    if(type == 'lr'):
+        prediction = lrmodel.test(tensorData)
+    # 使用sage方法预测
+    elif(type == 'sage'):
+        prediction = sagemodel.test(tensorData)
     print(prediction.size())
     resultIndexList = torch.max(prediction[0],1)[1].numpy().tolist()
     for i in range(len(resultIndexList)):
