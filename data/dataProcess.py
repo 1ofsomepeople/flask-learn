@@ -85,7 +85,7 @@ def loadDataForPred(index = 0, dataType = 'gt'):
         tensorData = torch.Tensor(dataForPred).unsqueeze(0).long()
         # # print(tensorData.size())
         # # print(tensorData.type())
-        return (predictTime,pointsIndex,tensorData)
+        return (predictTime,pointsIndex,tensorData,dataGroudTruth)
 
 # 获取gt数据object
 def getGtData(inputDataIndex = 0):
@@ -109,7 +109,7 @@ def getGtData(inputDataIndex = 0):
 
 # 获取pred数据object
 def getPredData(inputDataIndex = 0, method = 'lr'):
-    (predictTime,pointsIndex,tensorData) = loadDataForPred(inputDataIndex,'pred')
+    (predictTime,pointsIndex,tensorData,dataGroudTruth) = loadDataForPred(inputDataIndex,'pred')
 
     prediction = None
     if(method == 'lr'):
@@ -119,6 +119,14 @@ def getPredData(inputDataIndex = 0, method = 'lr'):
     print(prediction.size())
 
     resultIndexList = torch.max(prediction[0],1)[1].numpy().tolist()
+
+    # numpy实现MAE MAPE
+    y_pred = np.array(resultIndexList)
+    y_pred = (y_pred+1)*20
+    y_gt = np.array(dataGroudTruth)
+    scorePrecision = round(np.mean(np.equal(y_gt,y_pred))*100,4)
+    scoreMAE = round(np.mean(np.abs(y_pred - y_gt)),4)
+    scoreMAPE = round(np.mean(np.abs((y_pred - y_gt)/y_gt))*100,4)
 
     for i in range(len(resultIndexList)):
         [lon,lat] = pointsIndex[i].split('-')
@@ -132,6 +140,9 @@ def getPredData(inputDataIndex = 0, method = 'lr'):
         resultIndexList[i] = [lon,lat,value]
     predObj = {
         "jsonName":predictTime,
-        "data":resultIndexList
+        "data":resultIndexList,
+        "scorePrecision":scorePrecision,
+        "scoreMAE":scoreMAE,
+        "scoreMAPE":scoreMAPE,
     }
     return predObj
