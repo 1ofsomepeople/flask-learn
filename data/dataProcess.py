@@ -122,11 +122,32 @@ def getPredData(inputDataIndex = 0, method = 'lr'):
 
     # numpy实现MAE MAPE
     y_pred = np.array(resultIndexList)
-    y_pred = (y_pred+1)*20
-    y_gt = np.array(dataGroudTruth)
-    scorePrecision = round(np.mean(np.equal(y_gt,y_pred))*100,4)
-    scoreMAE = round(np.mean(np.abs(y_pred - y_gt)),4)
-    scoreMAPE = round(np.mean(np.abs((y_pred - y_gt)/y_gt))*100,4)
+    y_pred = (y_pred+1)*20 # 预测值nparray
+    y_gt = np.array(dataGroudTruth) # 真实值nparray
+    scorePrecision = round(np.mean(np.equal(y_gt,y_pred))*100,4) # 准确率
+    scoreMAE = round(np.mean(np.abs(y_pred - y_gt)),4) # 平均绝对误差
+    scoreMAPE = round(np.mean(np.abs((y_pred - y_gt)/y_gt))*100,4) # 平均绝对百分比误差
+
+    y_pred_list = y_pred.tolist() # 预测值list
+    y_gt_list = dataGroudTruth # 真实值list 
+    TPclear = 0 # 畅通的TP个数
+    TPslow = 0 # 缓行的TP个数
+    TPjam = 0 # 拥堵的TP个数
+    for index in range(len(y_gt_list)):
+        if(y_gt_list[index] == 20 and y_pred_list[index] == 20):
+            TPclear += 1
+        if(y_gt_list[index] == 40 and y_pred_list[index] == 40):
+            TPslow += 1
+        if(y_gt_list[index] == 60 and y_pred_list[index] == 60):
+            TPjam += 1
+    clearNum = len(y_gt[np.where(y_gt==20)]) # 畅通的真值节点个数
+    slowNum = len(y_gt[np.where(y_gt==40)]) # 缓行的真值节点个数
+    jamNum = len(y_gt[np.where(y_gt==60)]) # 拥堵的真值节点个数
+    precisionClear = round(TPclear/clearNum*100,4) # 通畅准确率
+    precisionSlow = round(TPslow/slowNum*100,4) # 缓行准确率
+    precisionJam = round(TPjam/jamNum*100,4) # 拥堵准确率
+    precisionSlowJam = round((TPslow+TPjam)/(slowNum+jamNum)*100,4) # 缓行和拥堵的准确率
+    precision = round((TPclear+TPslow+TPjam)/(clearNum+slowNum+jamNum)*100,4) # 总体的准确率，等同于scorePrecision
 
     for i in range(len(resultIndexList)):
         [lon,lat] = pointsIndex[i].split('-')
@@ -139,10 +160,15 @@ def getPredData(inputDataIndex = 0, method = 'lr'):
             value = 10
         resultIndexList[i] = [lon,lat,value]
     predObj = {
-        "jsonName":predictTime,
-        "data":resultIndexList,
-        "scorePrecision":scorePrecision,
-        "scoreMAE":scoreMAE,
-        "scoreMAPE":scoreMAPE,
+        "jsonName":predictTime, # data数据名，时间string
+        "data":resultIndexList, # data数据
+        "scorePrecision":scorePrecision, # 准确率
+        "scoreMAE":scoreMAE, # 平均绝对误差
+        "scoreMAPE":scoreMAPE, # 平均绝对百分比误差
+        "precisionClear":precisionClear, # 通畅准确率
+        "precisionSlow":precisionSlow, # 缓行准确率
+        "precisionJam":precisionJam, # 拥堵准确率
+        "precisionSlowJam":precisionSlowJam, # 缓行和拥堵的准确率
+        "precision":precision, # 总体的准确率，等同于scorePrecision
     }
     return predObj
