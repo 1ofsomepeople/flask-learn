@@ -26,7 +26,7 @@ def readtestdata(path = './tempdata.json'):
     return (jsonName,data)
 
 # 创建并初始化csv
-def createCsv(testjsonName,testdata):
+def createCsv(testjsonName,testdata,csvName = 'data.csv'):
     pointIndex = []
     valueList = []
     for point in testdata:
@@ -46,15 +46,15 @@ def createCsv(testjsonName,testdata):
         valueList.append(value)
 
     initCsv = pd.DataFrame({'lonlat':pointIndex,testjsonName:valueList})
-    initCsv.to_csv('data.csv',index=0,encoding='gbk')
+    initCsv.to_csv(csvName,index=0,encoding='gbk')
 
 # 将json的data插入csv中
 # dataname：列名，json数据日期string
 # data：一列数据，值为1,3,7,10,在此函数中映射到20 40 60
 # max：表的最大数据列数，当超过max组数据被插入的时候删除第一列数据,当max=-1时不删除第一列
-def appendData(dataname,data,max=16):
+def appendData(dataname,data,max=16,csvName = 'data.csv'):
     # 读csv，生成dataFrame
-    readCsv = pd.read_csv('data.csv')
+    readCsv = pd.read_csv(csvName)
     # 经纬度的pointindex数组
     pointsIndex = np.array(readCsv.values)[:,0].tolist()
     # 要插入的value数组
@@ -81,7 +81,7 @@ def appendData(dataname,data,max=16):
     readCsv.insert(csv_columns_length,dataname,valueList,allow_duplicates=True)
     if(max != -1 and csv_columns_length >= max):
         readCsv.drop(readCsv.columns[1], axis=1, inplace=True)
-    readCsv.to_csv('data.csv',index=0,encoding='gbk')
+    readCsv.to_csv(csvName,index=0,encoding='gbk')
 
 # 加载用于模型预测的数据
 def loadDataForPred():

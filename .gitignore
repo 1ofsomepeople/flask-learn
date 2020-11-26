@@ -13,3 +13,5 @@ flask-env
 
 # 下载的百度拥堵图片
 *.png
+
+/data/2019_04_02_all_data_json/*.json

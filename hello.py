@@ -87,7 +87,7 @@ def getHistoryDataGt():
     dataIndex = int(paramData.get("dataIndex"))
 
     dataObj = {}
-    dataObj = dataProcess.getGtData(dataIndex)
+    dataObj = dataProcess.getGtData(dataIndex,'data.csv')
     return jsonify(dataObj)
 
 @app.route('/data/history/pred/', methods = ["GET","POST"])   # GET 和 POST 都可以
@@ -103,7 +103,7 @@ def getHistoryDataPred():
     predictType = str(paramData.get("predictType"))
 
     dataObj = {}
-    dataObj = dataProcess.getPredData(dataIndex,predictType)
+    dataObj = dataProcess.getPredData(dataIndex,predictType,'data.csv')
     return jsonify(dataObj)
 
 if __name__ == "__main__":

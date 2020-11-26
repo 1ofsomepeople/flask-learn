@@ -16,14 +16,14 @@ import png2json as png2json
 import pred_model.lr_online_test as lrmodel
 import pred_model.sage_online_test as sagemodel
 
-def getOrinDataDirPath():
+def getOrinDataDirPath(dataDirName = "originalData"):
     # original_dataDir_path是原始数据存放的目录的绝对路径
-    original_dataDir_path = "originalData"
+    original_dataDir_path = dataDirName
     path=os.path.abspath('.')   #表示执行环境的绝对路径
     if(os.path.split(path)[-1] == 'data'):
-        original_dataDir_path = os.path.join(path,'originalData')
+        original_dataDir_path = os.path.join(path,dataDirName)
     elif(os.path.split(path)[-1] == 'flask-learn'):
-        original_dataDir_path = os.path.join(path,'data','originalData')
+        original_dataDir_path = os.path.join(path,'data',dataDirName)
     return original_dataDir_path
 
 #  读取json文件，返回日期string和数据list
@@ -40,31 +40,32 @@ def readJsonData(dirPath,fileName):
 
 # 根据一系列json数据文件生成数据表data.csv
 # 生成data.csv文件
-def getDataCsv():
+def getDataCsv(csvName,dataDirName):
     # 文件的目录路径
-    dataDirPath = getOrinDataDirPath()
+    dataDirPath = getOrinDataDirPath(dataDirName)
     # 目录下所有文件名的list
     fileList = os.listdir(dataDirPath)
 
     jsonName,data = readJsonData(dataDirPath,fileList[0])
 
-    datacsv.createCsv(jsonName,data)
+    datacsv.createCsv(jsonName,data,csvName)
 
     for index in range(1,len(fileList)):
+        print('index:'+str(index)+';fileName:'+fileList[index])
         jsonName,data = readJsonData(dataDirPath,fileList[index])
-        datacsv.appendData(jsonName,data,-1)
+        datacsv.appendData(jsonName,data,-1,csvName)
 
 # 加载用于模型预测的数据
-def loadDataForPred(index = 0, dataType = 'gt'):
+def loadDataForPred(index = 0, dataType = 'gt', dataName='data.csv'):
     # index超出阈值的处理
     index = index % 10
 
-    file_name = 'data.csv'
+    file_name = dataName
     path=os.path.abspath('.')   #表示执行环境的绝对路径
     if(os.path.split(path)[-1] == 'data'):
-        file_name = os.path.join(path,'data.csv')
+        file_name = os.path.join(path,dataName)
     elif(os.path.split(path)[-1] == 'flask-learn'):
-        file_name = os.path.join(path,'data','data.csv')
+        file_name = os.path.join(path,'data',dataName)
     # 读csv，生成dataFrame
     readCsv = pd.read_csv(file_name)
     # 经纬度的pointindex数组
@@ -88,8 +89,8 @@ def loadDataForPred(index = 0, dataType = 'gt'):
         return (predictTime,pointsIndex,tensorData,dataGroudTruth)
 
 # 获取gt数据object
-def getGtData(inputDataIndex = 0):
-    (predictTime,pointsIndex,dataGroudTruth) = loadDataForPred(inputDataIndex,'gt')
+def getGtData(inputDataIndex = 0, dataName='data.csv'):
+    (predictTime,pointsIndex,dataGroudTruth) = loadDataForPred(inputDataIndex,'gt',dataName)
 
     for i in range(len(dataGroudTruth)):
         [lon,lat] = pointsIndex[i].split('-')
@@ -108,8 +109,8 @@ def getGtData(inputDataIndex = 0):
     return resObj
 
 # 获取pred数据object
-def getPredData(inputDataIndex = 0, method = 'lr'):
-    (predictTime,pointsIndex,tensorData,dataGroudTruth) = loadDataForPred(inputDataIndex,'pred')
+def getPredData(inputDataIndex = 0, method = 'lr', dataName='data.csv'):
+    (predictTime,pointsIndex,tensorData,dataGroudTruth) = loadDataForPred(inputDataIndex,'pred',dataName)
 
     prediction = None
     if(method == 'lr'):
