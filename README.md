@@ -23,10 +23,14 @@ pip freeze >requirements.txt
 pip install -r requirements.txt
 安装项目依赖
 
+pip install torch==1.6.0+cpu torchvision==0.7.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
+安装 pytorch==1.6.0 torchvision==0.7.0 cpu版
+
+
 # 4. 项目运行和查看
 https://www.cnblogs.com/baby123/p/6477429.html
-nohup后台运行
-nohup python hello.py > ~/project/output.log 2>&1 &
+nohup后台运行 设置log输出的文件
+nohup python hello.py > ~/project/trafficVis_RD/output.log 2>&1 &
 项目进程查看
 jobs -l 
 ps -aux|grep python 
