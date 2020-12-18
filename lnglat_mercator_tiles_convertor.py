@@ -348,7 +348,11 @@ def convertPointList(lonlatList, oriType, aimType):
                 resPoint = list(gcj02_to_bd09(*curPoint))
                 resArr.append(resPoint)
         return resArr
-
+# 根据线段头尾两坐标点，返回线段中点坐标点
+# 参数是两个表示坐标经纬度的数组 List类型 [lon,lat],[lon,lat]
+def centerPoint(point1,point2):
+    center = [(point1[0]+point2[0])/2, (point1[1]+point2[1])/2]
+    return center
 
 # gcj02lnglat = (116.395705935264,39.9073249605712)
 # wgs84lnglat = gcj02_to_wgs84(*gcj02lnglat)
