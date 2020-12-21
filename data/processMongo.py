@@ -110,9 +110,11 @@ def mongoInsertData(data,collectionInstance):
 # mongoInsertData(res,testCollection)
 
 # 获取所有要插入文件的路径list
-def getAllFilePathList(rootPath):
+def getAllFilePathList(rootPath, monthSelect = 0):
     filePathList = []
     monthList = os.listdir(rootPath)
+    if(monthSelect != 0):
+        monthList = [monthList[monthSelect-1]]
     for month in monthList:
         monthPath = os.path.join(rootPath,month)
         if(os.path.isdir(monthPath)):
@@ -213,8 +215,8 @@ class MyMultiprocess(object):
         self.pool.close()
         self.pool.join()
 
-
-def processMongo(splitList,processIndex):
+# 单个进程执行的任务
+def processMongo(splitList,processIndex=1):
     data = splitList[processIndex]
     # for index in tqdm(range(len(data)), ncols=80, desc='执行任务' + str(processIndex) + ' pid:' + str(os.getpid())):
     #     filename = os.path.basename(data[index])
@@ -253,5 +255,215 @@ def multiProcessMain():
     end = time.time()
     print("\n应用多进程耗时: %0.2f seconds" % (end - start))
 
+# mongo查询 根据时间和路名进行查询 返回{road time txtInfo.direction txtInfo.avespeed}组成的数组
+# roadName 查询的路名字符串 '荣华南路'
+# startStr1 开始时间字符串 "2020-11-09 00:00"
+# endStr1 结束时间字符串 "2020-11-09 23:59"
+def mongoSearch(roadName,startStr,endStr,direction,id):
+    # print(collection.estimated_document_count())
+    # startTime = datetime.datetime(2020, 11, 9, 0, 0)
+    # startTime = parser.parse("2020-11-09 00:00")
+    # endTime = datetime.datetime(2020, 11, 9, 23, 59)
+    # endTime = parser.parse("2020-11-09 23:59")
+    startTime = parser.parse(startStr)
+    endTime = parser.parse(endStr)
+
+    # 查找筛选属性在时间范围内的文档
+    targetData = list(collection.find(
+            # 查询条件
+            {
+                'time':{
+                    "$gte":startTime,
+                    "$lte":endTime
+                    },
+                'road': roadName,
+                "txtInfo":{ "$elemMatch" :{"direction":direction,'section.id': id}},
+                # 'txtInfo.direction': direction,
+                # 'txtInfo.section.id': id,
+            },
+            # 检索的字段列表
+            {
+                "_id":0,
+                "road":1,
+                "time":1,
+                "txtInfo.direction":1,
+                "txtInfo.section":1
+                # "txtInfo.section.speed":{ "$elemMatch" :{'txtInfo.section.id': id}},
+                # "txtInfo.direction":1,
+                # "txtInfo.section.speed":1
+                # "txtInfo.section.speed":1,
+                # "txtInfo.section":{"$slice": [int(id)-1,1] },
+                
+            }
+        )
+    )
+
+    for item in targetData:
+        # 转换时间格式
+        item['time'] = str(item['time'])
+        # 筛选出符合要求的路段的 方向 id 速度
+        txtInfo = item['txtInfo']
+        txtInfoRes = {}
+        txtInfoRes['direction'] = direction
+        for directionInfo in txtInfo:
+            if(directionInfo['direction'] == direction):
+                section = directionInfo['section']
+                for sec in section:
+                    if(sec['id'] == id):
+                        txtInfoRes['sectionId'] = sec['id']
+                        txtInfoRes['speed'] = sec['speed']
+                        break
+                break     
+        item['txtInfo'] = txtInfoRes
+    return targetData
+
+# 根据查询参数进行查询，生成一个对象组成的数组
+def paramSearch(roadname,direction,id):
+    timeParam = [
+        ["2020-11-09 07:00","2020-11-09 09:30"],["2020-11-09 17:00","2020-11-09 19:30"],
+        ["2020-11-10 07:00","2020-11-10 09:30"],["2020-11-10 17:00","2020-11-10 19:30"],
+        ["2020-11-11 07:00","2020-11-11 09:30"],["2020-11-11 17:00","2020-11-11 19:30"],
+        ["2020-11-12 07:00","2020-11-12 09:30"],["2020-11-12 17:00","2020-11-12 19:30"],
+        ["2020-11-13 07:00","2020-11-13 09:30"],["2020-11-13 17:00","2020-11-13 19:30"],
+        ["2020-11-14 07:00","2020-11-14 09:30"],["2020-11-14 17:00","2020-11-14 19:30"],
+        ["2020-11-15 07:00","2020-11-15 09:30"],["2020-11-15 17:00","2020-11-15 19:30"],
+    ]
+    resList = []
+    for param in timeParam:
+        res = mongoSearch(roadname,param[0],param[1],direction,id)
+        resList.extend(res)
+    return resList
+
+# 对象数组导出转成json文件
+# objArray对象数组
+# jsonName json文件名
+def objArray2Json(objArray, jsonName = 'test.json'):
+    # 由于json中有中文，所以需要注明编码格式encoding及ensure_ascii
+    with open(jsonName, 'w', encoding='utf-8') as json_file:  
+        json.dump(objArray, json_file, ensure_ascii=False, indent=4)
+
+# 根据路名生成相对应的json文件
+def roadName2Json():
+    roadList =[
+        {
+            "roadName": "中关村大街",  # NS id 3 SN id 5 
+            "roadSectionParam": [
+                ["中关村大街","NS","3"],
+                ["中关村大街","SN","5"]
+            ],
+            "fileName": "1_中关村南大街海淀黄庄南公交站（靠十字路口的天桥）.json"
+        },
+        {
+            "roadName": "中关村大街", # NS id 7 SN id 8  
+            "roadSectionParam": [
+                ["中关村大街","NS","7"],
+                ["中关村大街","SN","8"]
+            ],
+            "fileName": "2_中关村南大街家乐福东边的天桥.json"
+        },
+        {
+            "roadName": "中关村南大街", #NSid1 SNid3
+            "roadSectionParam": [
+                ["中关村南大街","NS","1"],
+                ["中关村南大街","SN","3"]
+            ],
+            "fileName": "3_中关村南大街海淀科技大厦东天桥.json"
+        },
+        {
+            "roadName": "北三环中路辅路（外环）",  # 北三环（外环）EWid4  #北三环（内环）WEid2
+            "roadSectionParam": [
+                ["北三环（外环）","EW","4"],
+                ["北三环（内环）","WE","2"]
+            ],
+            "fileName": "4_蓟门桥东天桥（中国教育科学研究院北）.json"
+        },
+        {
+            "roadName": "北三环西路辅路（外环）",  # 北三环（外环）EWid5  #北三环（内环）WEid1
+            "roadSectionParam": [
+                ["北三环（外环）","EW","5"],
+                ["北三环（内环）","WE","1"]
+            ],
+            "fileName": "6_北三环西路（北京科学会堂）.json"
+        },
+        {
+            "roadName": "北三环（内环）",  # 北三环（外环）EWid5  #北三环（内环）WEid1
+            "roadSectionParam": [
+                ["北三环（外环）","EW","5"],
+                ["北三环（内环）","WE","1"]
+            ],
+            "fileName": "7_北三环西路（双安商场东-即北京UME影视城天桥）.json"
+        },
+        {
+            "roadName": "远大路", # EWid1  WEid4
+            "roadSectionParam": [
+                ["远大路","EW","1"],
+                ["远大路","WE","4"]
+            ],
+            "fileName": "8_世纪金源商场南边.json"
+        },
+        {
+            "roadName": "北三环（外环）", # 北三环（外环）EWid5  #北三环（内环）WEid1
+            "roadSectionParam": [
+                ["北三环（外环）","EW","5"],
+                ["北三环（内环）","WE","1"]
+            ],
+            "fileName": "9_北京华医皮肤医院北天桥（蓟门桥西）.json"
+        },
+        {
+            "roadName": "西三环北路辅路（外环）", # 西三环北路辅路（外环） NSid1  西三环（外环）NSid1
+            "roadSectionParam": [
+                ["西三环北路辅路（外环）","NS","1"],
+            ],
+            "fileName": "10_西三环北路满庭芬芳西天桥.json"
+        },
+    ]
+
+    for roadfile in roadList:
+        roadParams = roadfile["roadSectionParam"]
+        roadData = []
+        for roadParam in roadParams:
+            res = paramSearch(roadParam[0],roadParam[1],roadParam[2])
+            roadData.extend(res)
+        print(roadfile["fileName"])
+        print(len(roadData))
+        objArray2Json(roadData,roadfile["fileName"])
+
+
+
+# 根据坐标点获取周围道路车流
+def poiSearchMain():
+    # [ 39.90711752 116.23571599] 八宝山地铁站 石景山路WE 上庄大街 NS 3 上庄大街 SN 1 
+    # [ 39.85327291 116.37153198] 马家堡地铁站 马家堡西路 NS 1 马家堡西路 SN 5
+    # [ 39.97587197 116.31781068] 海淀黄庄地铁站 知春路 EW 9 知春路 WE 1 中关村大街 NS 5,6 中关村大街 SN 5,6
+    # [ 39.99881785 116.46822132] 望京地铁站  广顺北大街 NS 7 广顺北大街 SN 2
+    # 四个节点周围道路的速度数据统计
+    # 选一个工作日和一个周末就行
+    # 生成numpy的矩阵
+    timeParam = [
+                    ["2020-11-09 00:00","2020-11-09 23:59"], # 周一
+                    ["2020-11-14 00:00","2020-11-14 23:59"]  # 周六
+                ]
+
+    roadList = [
+        {
+            "pointName": "八宝山地铁站", # EWid1  WEid4
+            "roadSectionParam": [
+                ["上庄大街","NS","3"],
+                ["上庄大街","SN","1"]
+            ],
+            "fileName": "1_八宝山地铁站.json"
+        },
+    ]        
+
+
+
 if __name__ == '__main__':
-    multiProcessMain()
+    # res = mongoSearch("中关村大街","2020-11-09 07:00","2020-11-09 09:30","SN","5")
+    # res = paramSearch("中关村大街","SN","5")
+    # for i in res:
+    #     print(i)
+    # print(len(res))
+    # roadName2Json()
+    # fileList = getAllFilePathList(dataRootPath,11)
+    # client['test']['testCollection'].
+    
