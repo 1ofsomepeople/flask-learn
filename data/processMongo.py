@@ -536,8 +536,6 @@ def poiSearchMain():
 
         pointParams = pointfile["roadSectionParam"]
         fileName = pointfile["fileName"]
-
-             
         readCsv = pd.DataFrame({'time':timeIndex})
         # readCsv.to_csv(fileName,index=0,encoding='utf-8')
         # readCsv = pd.read_csv(fileName)
@@ -614,16 +612,119 @@ def InsertMongoData(dirPath = ''):
         print("要插入的文件个数：",len(fileList))
         multiProcessMain(fileList,1,7)
 
+# 获取poi点长时间的数据
+# dingchaofan 分析poi的疫情复工演变数据支撑
+def getPoiLongTime():
+
+    daytime = ["2020-01-01","2020-09-30"] # 9个月
+    hourtime = ["09:20","09:40"] # 时间点
+
+    pointList = [
+        {
+            "pointName": "海淀黄庄地铁站", 
+            "roadSectionParam": [
+                ["知春路","EW","9"],
+                ["知春路","WE","1"],
+            ],
+            "fileName": "1_海淀黄庄.csv"
+        },
+        {
+            "pointName": "望京地铁站", 
+            "roadSectionParam": [
+                ["广顺北大街","NS","7"],
+                ["广顺北大街","SN","2"]
+            ],
+            "fileName": "2_望京.csv"
+        },
+        {
+            "pointName": "北京西", 
+            "roadSectionParam": [
+                ["南蜂窝路","NS","1"],
+                ["南蜂窝路","SN","1"]
+            ],
+            "fileName": "3_北京西.csv"
+        },
+        {
+            "pointName": "北京南", 
+            "roadSectionParam": [
+                ["马家堡东路","NS","2"],
+                ["马家堡东路","SN","9"]
+            ],
+            "fileName": "4_北京南.csv"
+        },
+        {
+            "pointName": "西直门", 
+            "roadSectionParam": [
+                ["西直门北大街","NS","1"],
+                ["西直门北大街","SN","1"]
+            ],
+            "fileName": "3_西直门.csv"
+        },
+        {
+            "pointName": "三元桥", 
+            "roadSectionParam": [
+                ["北三环东路辅路（外环）","EW","1"],
+                ["北三环东路辅路（内环）","WE","1"]
+            ],
+            "fileName": "4_三元桥.csv"
+        },
+    ]
+
+    # 获取两个日期之间的按天遍历的日期list
+    startDay = datetime.datetime.strptime(daytime[0],"%Y-%m-%d")
+    endDay = datetime.datetime.strptime(daytime[1],"%Y-%m-%d")
+    date_list = []
+    while startDay <= endDay:
+        date_str = startDay.strftime("%Y-%m-%d")
+        date_list.append(date_str)
+        startDay += datetime.timedelta(days=1)
+    # 创建一个pandas矩阵 输入时间list作为第一列
+    readCsv = pd.DataFrame({'time':date_list})
+    
+    # 遍历poi点
+    for point in pointList:
+        for roadSectionParam in point["roadSectionParam"]:
+            print("处理参数--",roadSectionParam)
+            roadDataList = []
+            # 按天遍历查询
+
+            with trange(len(date_list)) as t:
+                for daystrIndex in t:
+                    daystr = date_list[daystrIndex]
+                    
+                    searchTimeStart = daystr+' '+hourtime[0]
+                    searchTimeEnd = daystr+' '+hourtime[-1]
+
+                    # 设置进度条左边显示的信息
+                    t.set_description("Procession: day--%s--param--%s"%(daystr,str([roadSectionParam[0], searchTimeStart, searchTimeEnd, roadSectionParam[1], roadSectionParam[2]])))
+                    # 查询
+                    res = mongoSearch(roadSectionParam[0], searchTimeStart, searchTimeEnd, roadSectionParam[1], roadSectionParam[2])
+                    for i in range(len(res)):
+                        res[i] = res[i]['txtInfo']['speed']
+                    if(len(res) != 0):
+                        res = int(np.mean(res))
+                    else:
+                        res = roadDataList[daystrIndex-1]           
+                    roadDataList.append(res)
+            # 列名
+            dataname = point["pointName"]+'_'+roadSectionParam[0]+'_'+roadSectionParam[1]+'_'+roadSectionParam[2]
+            # csv列的长度
+            csv_columns_length = readCsv.shape[1]
+            # 将此列插入要保存成csv的pandas数据
+            readCsv.insert(csv_columns_length,dataname,roadDataList,allow_duplicates=True)  
+    # 保存成csv文件
+    readCsv.to_csv("6poi连续9个月早高峰.csv",index=0,encoding='utf-8')
+
 
 if __name__ == '__main__':
+    # getPoiLongTime()
     # fileList = getAllFileList('E:\\traffic_data\\temp' ,[])
     # print(fileList[-1])
     # romoveMongoData(datetime.datetime(2019, 12, 31, 23, 59))
-    res = mongoSearch("上庄大街","2020-02-01 00:00","2020-02-01 01:00","NS","3")
-    for i in res:
-        print(i)
-    print(len(res))
+    # res = mongoSearch('知春路', '2020-02-11 00:10', '2020-02-11 09:40', 'EW', '9')
+    # for i in res:
+    #     print(i)
+    # print(len(res))
     # roadName2Json()
     # fileList = getAllFilePathList(dataRootPath,11)
-    # client['test']['testCollection'].
     
