@@ -162,16 +162,15 @@ def listSplit(originlist, n):
     splitList = []
     splitLen = len(originlist) // n
     start = 0
-    while(start < len(originlist)):
+    for i in range(n-1):
         end = start + splitLen
-        if(end > len(originlist)):
-            end = -1
         templist = originlist[start:end]
         splitList.append(templist)
-        start = start + splitLen
+        start = end
+    templist = originlist[start:]
+    splitList.append(templist)
     return splitList
     
-
 # 多线程执行任务
 def threadTasks(fileList, threadNum = 10):
     splitList = listSplit(fileList, threadNum)
@@ -210,8 +209,8 @@ class MyMultiprocess(object):
     def work(self, func, args):
         dataSplitList = args[0]
         processIndexList = args[1]
-        print(len(dataSplitList[0]))
-        print(len(processIndexList))
+        print("任务分片步长：",len(dataSplitList[0]))
+        print("任务分片总数：",len(processIndexList))
         for arg in processIndexList:
             self.pool.apply_async(func, (dataSplitList,arg,))
         self.pool.close()
@@ -238,18 +237,22 @@ def processMongo(splitList,processIndex=1):
                 mongoInsertData(res,collection)
 
 # 多进程执行主函数
-def multiProcessMain():
-    # 定义多进程数
-    threadNum = 1000
+def multiProcessMain(fileList = [], processNum = 1, threadNum = 1000, mongoDBInit = False):
+    # 定义总进程数
+    # threadNum = 1000
     print('父进程 %s.' % os.getpid())
-    # 获取所有文件的路径list
-    fileList = getAllFilePathList(dataRootPath)
+
+    if(mongoDBInit):
+        # 获取所有文件的路径list
+        fileList = getAllFilePathList(dataRootPath)
+    if(processNum > cpu_count()):
+        processNum = cpu_count()
     # 获取路径list分片数组
     splitList = listSplit(fileList, threadNum)
     
     # 生成多进程任务
-    mymultiprocess = MyMultiprocess(cpu_count())
-    # mymultiprocess = MyMultiprocess(2)
+    # mymultiprocess = MyMultiprocess(cpu_count())
+    mymultiprocess = MyMultiprocess(processNum)
 
     start = time.time()
     # 开始执行
@@ -428,8 +431,8 @@ def roadName2Json():
         for roadParam in roadParams:
             res = paramSearch(roadParam[0],roadParam[1],roadParam[2])
             roadData.extend(res)
-        print(roadfile["fileName"])
-        print(len(roadData))
+        print("",roadfile["fileName"])
+        print("",len(roadData))
         objArray2Json(roadData,roadfile["fileName"])
 
 # 将查询结果的数组转换成只含有对应速度的数组,对数组的缺失元素进行邻近值填充
@@ -577,14 +580,49 @@ def poiSearchMain():
     # argueList = argueArray(roadInfo)
     # # print(argueList)
 
+# 递归获取目录下所有json格式的文件路径
+def getAllFileList(path,fileList):
+    # 首先遍历当前目录所有文件及文件夹
+    file_list = os.listdir(path)
+    # 准备循环判断每个元素是否是文件夹还是文件，是文件的话，把名称传入list，是文件夹的话，递归
+    for filename in file_list:
+        # 利用os.path.join()方法取得路径全名，并存入cur_path变量，否则每次只能遍历一层目录
+        cur_path = os.path.join(path, filename)
+        # 判断是否是文件夹
+        if(os.path.isdir(cur_path)):
+            getAllFileList(cur_path, fileList)
+        else:
+            if(cur_path.endswith('.json')):
+                fileList.append(cur_path)
+    return fileList
+
+# 删除mongoDB中的数据
+def romoveMongoData(param):
+    collection.delete_many({
+        # 查询条件
+        'time':{
+            "$lte":param
+        },
+    })
+# 插入数据
+def InsertMongoData(dirPath = ''):
+    if(dirPath == ''):
+        print("请输入要插入数据的根目录路径")
+    else:
+        filepaths = []
+        fileList = getAllFileList(dirPath,[])
+        print("要插入的文件个数：",len(fileList))
+        multiProcessMain(fileList,1,7)
+
+
 if __name__ == '__main__':
-    pass
-    # res = mongoSearch("上庄大街","2020-11-09 00:00","2020-11-09 23:59","NS","3")
-    # res = paramSearch("中关村大街","SN","5")
-    # poiSearchMain()
-    # for i in res:
-    #     print(i)
-    # print(len(res))
+    # fileList = getAllFileList('E:\\traffic_data\\temp' ,[])
+    # print(fileList[-1])
+    # romoveMongoData(datetime.datetime(2019, 12, 31, 23, 59))
+    res = mongoSearch("上庄大街","2020-02-01 00:00","2020-02-01 01:00","NS","3")
+    for i in res:
+        print(i)
+    print(len(res))
     # roadName2Json()
     # fileList = getAllFilePathList(dataRootPath,11)
     # client['test']['testCollection'].
