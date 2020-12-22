@@ -4,6 +4,8 @@ import datetime
 import json
 import re
 import time
+import pandas as pd
+import numpy as np
 from tqdm import tqdm,trange
 import threading
 from multiprocessing import Process, Pool, freeze_support, RLock, cpu_count
@@ -342,7 +344,9 @@ def objArray2Json(objArray, jsonName = 'test.json'):
     with open(jsonName, 'w', encoding='utf-8') as json_file:  
         json.dump(objArray, json_file, ensure_ascii=False, indent=4)
 
+
 # 根据路名生成相对应的json文件
+# tiankun 所需数据
 def roadName2Json():
     roadList =[
         {
@@ -428,9 +432,36 @@ def roadName2Json():
         print(len(roadData))
         objArray2Json(roadData,roadfile["fileName"])
 
+# 将查询结果的数组转换成只含有对应速度的数组,对数组的缺失元素进行邻近值填充
+def argueArray(roadInfo):    
+    searchTime = parser.parse(roadInfo[0]["time"])
 
+    roadArray = []
+    if(len(roadInfo) == 1440):
+        for index in range(1440):
+            speed = roadInfo[index]["txtInfo"]["speed"]
+            roadArray.append(speed)
+    else:
+        start = time.time()
+        for index in trange(1440):
+            hour = index // 60
+            minute = index % 60
+            second = 0
+            year = searchTime.year
+            month = searchTime.month
+            day = searchTime.day
+            # 目标时间
+            aimTime = datetime.datetime(year, month, day, hour, minute, second)
+            for itemIndex in range(len(roadInfo)):
+                if(parser.parse(roadInfo[itemIndex]["time"]) >= aimTime):
+                    roadArray.append(roadInfo[itemIndex]["txtInfo"]["speed"])
+                    break
+        end = time.time()
+        print("转换耗时: %0.2f seconds" % (end - start))
+    return roadArray
 
 # 根据坐标点获取周围道路车流
+# fangshen 所需数据
 def poiSearchMain():
     # [ 39.90711752 116.23571599] 八宝山地铁站 石景山路WE 上庄大街 NS 3 上庄大街 SN 1 
     # [ 39.85327291 116.37153198] 马家堡地铁站 马家堡西路 NS 1 马家堡西路 SN 5
@@ -440,26 +471,117 @@ def poiSearchMain():
     # 选一个工作日和一个周末就行
     # 生成numpy的矩阵
     timeParam = [
-                    ["2020-11-09 00:00","2020-11-09 23:59"], # 周一
-                    ["2020-11-14 00:00","2020-11-14 23:59"]  # 周六
+                    ["2020-11-10 00:00","2020-11-10 23:59"], # 周二
+                    ["2020-11-14 00:00","2020-11-14 23:59"], # 周六
                 ]
 
-    roadList = [
+    pointList = [
         {
-            "pointName": "八宝山地铁站", # EWid1  WEid4
+            "pointName": "八宝山地铁站", 
             "roadSectionParam": [
                 ["上庄大街","NS","3"],
                 ["上庄大街","SN","1"]
             ],
-            "fileName": "1_八宝山地铁站.json"
+            "fileName": "1_八宝山地铁站.csv"
         },
-    ]        
+        {
+            "pointName": "马家堡地铁站", 
+            "roadSectionParam": [
+                ["马家堡西路","NS","1"],
+                ["马家堡西路","SN","5"]
+            ],
+            "fileName": "2_马家堡地铁站.csv"
+        },
+        {
+            "pointName": "海淀黄庄地铁站", 
+            "roadSectionParam": [
+                ["知春路","EW","9"],
+                ["知春路","WE","1"],
+                ["中关村大街","NS","5"],
+                ["中关村大街","SN","6"],
+                ["中关村大街","NS","6"],
+                ["中关村大街","SN","5"]
+            ],
+            "fileName": "3_海淀黄庄地铁站.csv"
+        },
+        {
+            "pointName": "望京地铁站", 
+            "roadSectionParam": [
+                ["广顺北大街","NS","7"],
+                ["广顺北大街","SN","2"]
+            ],
+            "fileName": "4_望京地铁站.csv"
+        },
+    ] 
+    
+    # 生成每分钟增加的时间index
+    timeIndex = []
+    for i in range(1440):
+        hour = str(i // 60)
+        minute = str(i % 60)
+        if(len(hour) <= 1):
+            hour = '0' + hour
+        if(len(minute) <= 1):
+            minute = '0' + minute
+        timeindex = hour+':'+minute
+        timeIndex.append(timeindex)  
 
+    # 遍历每个点
+    for pointfile in pointList:
 
+        start = time.time()
+
+        pointParams = pointfile["roadSectionParam"]
+        fileName = pointfile["fileName"]
+
+             
+        readCsv = pd.DataFrame({'time':timeIndex})
+        # readCsv.to_csv(fileName,index=0,encoding='utf-8')
+        # readCsv = pd.read_csv(fileName)
+        # 遍历搜索的时间
+        for dateIndex in range(len(timeParam)):
+            datetime = timeParam[dateIndex][0].split(' ')[0]
+            timeStr = "workday_"
+            if(dateIndex == 1):
+                timeStr = "weekend_"
+            timeStr = timeStr+datetime
+            # 对于每一条路
+            for roadparam in pointParams:
+                # 列名
+                dataname = timeStr+'_'+roadparam[0]+'_'+roadparam[1]+'_secid'+roadparam[2]
+                # csv列的长度
+                csv_columns_length = readCsv.shape[1]
+                # 获取此列的道路车速数据list
+                searchStart = time.time()
+                roadInfo = mongoSearch(roadparam[0],timeParam[dateIndex][0],timeParam[dateIndex][1],roadparam[1],roadparam[2])
+                searchEnd = time.time()
+                print(
+                    "查询MongoDB耗时: %0.2f seconds。----查询参数：%s" 
+                    % (
+                        (searchEnd - searchStart),
+                        (str([roadparam[0],timeParam[dateIndex][0],timeParam[dateIndex][1],roadparam[1],roadparam[2]]))
+                    )
+                )
+                # 填补缺失数据
+                dataList = argueArray(roadInfo)
+                # 将此列插入要保存成csv的pandas数据
+                readCsv.insert(csv_columns_length,dataname,dataList,allow_duplicates=True)
+                # 保存成csv文件
+                readCsv.to_csv(fileName,index=0,encoding='utf-8')
+        
+        end = time.time()
+        print("处理文件：%s，耗时: %0.2f seconds" % (fileName,(end - start)))
+
+    # roadInfo = mongoSearch("上庄大街","2020-11-09 00:00","2020-11-09 23:59","NS","3")
+    
+    # argueList = argueArray(roadInfo)
+    # # print(argueList)
 
 if __name__ == '__main__':
-    # res = mongoSearch("中关村大街","2020-11-09 07:00","2020-11-09 09:30","SN","5")
+    pass
+    # res = mongoSearch("上庄大街","2020-11-09 00:00","2020-11-09 23:59","NS","3")
     # res = paramSearch("中关村大街","SN","5")
+    # poiSearchMain()
     # for i in res:
     #     print(i)
     # print(len(res))
