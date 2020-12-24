@@ -11,6 +11,7 @@ import threading
 from multiprocessing import Process, Pool, freeze_support, RLock, cpu_count
 import multiprocessing as mp
 from pymongo import MongoClient
+import matplotlib.pyplot as plt
 
 # 上级目录加到了sys.path里,导入上级目录下模块
 sys.path.append("..")
@@ -568,7 +569,7 @@ def poiSearchMain():
                 # 将此列插入要保存成csv的pandas数据
                 readCsv.insert(csv_columns_length,dataname,dataList,allow_duplicates=True)
                 # 保存成csv文件
-                readCsv.to_csv(fileName,index=0,encoding='utf-8')
+                readCsv.to_csv(fileName,index=0,encoding='utf_8_sig')
         
         end = time.time()
         print("处理文件：%s，耗时: %0.2f seconds" % (fileName,(end - start)))
@@ -617,7 +618,7 @@ def InsertMongoData(dirPath = ''):
 def getPoiLongTime():
 
     daytime = ["2020-01-01","2020-09-30"] # 9个月
-    hourtime = ["09:20","09:40"] # 时间点
+    hourtime = ["08:15","08:44"] # 时间点
 
     pointList = [
         {
@@ -668,6 +669,14 @@ def getPoiLongTime():
             ],
             "fileName": "4_三元桥.csv"
         },
+        {
+            "pointName": "盘古大观", 
+            "roadSectionParam": [
+                ["北辰西路","NS","6"],
+                ["北辰西路","SN","3"]
+            ],
+            "fileName": "4_三元桥.csv"
+        },
     ]
 
     # 获取两个日期之间的按天遍历的日期list
@@ -712,12 +721,79 @@ def getPoiLongTime():
             csv_columns_length = readCsv.shape[1]
             # 将此列插入要保存成csv的pandas数据
             readCsv.insert(csv_columns_length,dataname,roadDataList,allow_duplicates=True)  
+    
+    minuteGap = (int(hourtime[1].split(':')[0])-int(hourtime[0].split(':')[0]))*60+(int(hourtime[1].split(':')[1])-int(hourtime[0].split(':')[1])+1)
+    fileName = "6poi连续9个月早高峰_8-30-"+str(minuteGap)+'.csv'
     # 保存成csv文件
-    readCsv.to_csv("6poi连续9个月早高峰.csv",index=0,encoding='utf-8')
+    readCsv.to_csv(fileName,index=0,encoding='utf_8_sig')
 
+def selectTimeProcess(fileName):
+    readCsv = pd.read_csv(fileName)
+
+    timeIndex = np.array(readCsv.values)[:,0].tolist()
+
+    # 表头
+    header = readCsv.columns.values.tolist()
+    # 每隔7行 选取数据
+    # selectData = np.array(readCsv.values)[0::7,:]
+
+    # 每隔7行 选取时间index数据
+    # selectData = np.array(readCsv.values)[0::7, 0]
+
+    # 每隔7行 选取数据矩阵 
+    selectData = np.array(readCsv.values)[0::7, 0:]
+    
+    for index in range(0, len(timeIndex), 7):
+        end = index + 7
+        if(end > len(timeIndex)):
+            end = len(timeIndex)
+        aveValue = [0]*len(header)
+        for i in range(index,end,1):
+            for j in range(1,len(header)):
+                aveValue[j] = aveValue[j] + np.array(readCsv.values)[i,j]
+        for j in range(1,len(header)):
+            selectData[index//7,j] = int(aveValue[j]//(end-index))
+    print(selectData)
+
+    # numpy转pandas
+    readCsv = pd.DataFrame(selectData)
+    # 修改DataFrame的列名
+    readCsv.columns = header
+    # 保存成csv文件
+    fileName = fileName.split('.')[0]+'每周平均'+'.csv'
+    readCsv.to_csv(fileName,index=0,encoding='utf_8_sig')
+    
+
+# 绘制图表
+def createPic():
+    fileName = '6poi连续9个月早高峰_8-30-120.csv'
+    readCsv = pd.read_csv(fileName)
+    timeIndex = np.array(readCsv.values)[:,0].tolist()
+
+    # # 每隔5列 选取数据
+    # selectData = np.array(readCsv.values)[:, index+1::5]
+    # # 前12列数据 用于预测
+    # dataForPred = selectData[:,0:12:1].tolist()
+    # # 第13列数据 预测结果的groundTruth
+    # dataGroudTruth = selectData[:,12].tolist()
+    # 预测的时间
+    # predictTime = readCsv.columns.values.tolist()[index-10]
+
+    plt.subplot(2,1,1)
+    plt.xticks([]), plt.yticks([])
+    # plt.text(0.5,0.5, 'subplot(2,1,1)',ha='center',va='center',size=24,alpha=.5)
+
+    plt.subplot(2,1,2)
+    plt.xticks([]), plt.yticks([])
+    # plt.text(0.5,0.5, 'subplot(2,1,2)',ha='center',va='center',size=24,alpha=.5)
+
+    # plt.savefig('../figures/subplot-horizontal.png', dpi=64)
+    plt.show()
 
 if __name__ == '__main__':
     # getPoiLongTime()
+    # selectTimeProcess('6poi连续9个月早高峰_8-30-60.csv')
+    # createPic()
     # fileList = getAllFileList('E:\\traffic_data\\temp' ,[])
     # print(fileList[-1])
     # romoveMongoData(datetime.datetime(2019, 12, 31, 23, 59))
