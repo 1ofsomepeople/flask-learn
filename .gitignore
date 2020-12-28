@@ -8,6 +8,9 @@ __pycache__
 /flask-env
 flask-env
 
+# vscode counter
+.VSCodeCounter
+
 # 数据库
 *.db
 
