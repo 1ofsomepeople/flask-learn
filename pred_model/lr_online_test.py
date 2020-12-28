@@ -17,18 +17,18 @@ import os
 class OneHotProcess(nn.Module):
     def __init__(self, in_dim, hid_c):
         super(OneHotProcess, self).__init__()
-        self.embedding = nn.Embedding(in_dim, hid_c)
+        self.embedding = nn.Embedding(in_dim, hid_c) # 生成一个固定维度的矩阵
 
     def forward(self, source):
-        source = source // 20 - 1
-        source = self.embedding(source)
+        source = source // 20 - 1 # onehot标签 （0，0，0）  （0，1，0） 普通标签：0 1 2
+        source = self.embedding(source) 
 
         return source
 
 class LinearRegression(nn.Module):
     def __init__(self, in_dim, hid_c, src_len):
         super(LinearRegression, self).__init__()
-        self.oneHotEmbed = OneHotProcess(in_dim, hid_c)
+        self.oneHotEmbed = OneHotProcess(in_dim, hid_c) #in_dim 输入维度  hid ：hidden
         self.linear = nn.Linear(src_len * hid_c, in_dim)
 
     def forward(self, input_data, device):
@@ -38,9 +38,9 @@ class LinearRegression(nn.Module):
 
         B, N, src_len, hid_c = input_feature.size()
 
-        input_feature = input_feature.view(B, N, -1)  # [B, N, src_len * hid_dim]
+        input_feature = input_feature.view(B, N, -1)  # [B, N, src_len * hid_dim]  # resize
 
-        out_feature = F.relu(self.linear(input_feature)) # [B, N, in_dim]
+        out_feature = F.relu(self.linear(input_feature)) # [B, N, in_dim] #线性回归+激活函数
 
         predict = F.softmax(out_feature, dim=-1)
 
@@ -52,7 +52,7 @@ def test(test_data):
     test_data: [B, N, src_len]  20, 40, 60
     prediction: [B, N, in_dim]
     """
-
+    # 用CPU或者GPU
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     file_name = "lr.pkl"
@@ -62,19 +62,20 @@ def test(test_data):
     elif(os.path.split(path)[-1] == 'flask-learn'):
         file_name = os.path.join(path,'pred_model','lr.pkl')
 
-    checkpoint = torch.load(file_name, device)
-    model_para = checkpoint["model"]
-    option = checkpoint["setting"]
+    checkpoint = torch.load(file_name, device) # .pth   load权重，类型：dic
+    print(checkpoint)
+    model_para = checkpoint["model"] # load权重的参赛
+    option = checkpoint["setting"] # 某些参数设置
 
-    cudnn.benchmark = True
+    cudnn.benchmark = True  # 无用设置
 
-    model = LinearRegression(3, option.hid_c, option.h_step)
+    model = LinearRegression(3, option.hid_c, option.h_step) # 模型实例
 
-    model.load_state_dict(model_para)
+    model.load_state_dict(model_para) # load权重
 
-    model = model.to(device)
+    model = model.to(device) # 模型放到CPU或者GPU
 
-    prediction = model(test_data, device)
+    prediction = model(test_data, device) # 得到预测
 
     return prediction
 
@@ -106,10 +107,10 @@ def loadDataForPred():
     print(tensorData.type())
     return tensorData
 
-# if __name__ == '__main__':
+if __name__ == '__main__':
     # tensorData = loadDataForPred()
-    # tensorData = mockData()
-    # prediction = test(tensorData)
+    tensorData = mockData()
+    prediction = test(tensorData)
     # print(prediction.size())
     # resultIndexList = torch.max(prediction[0],1)[1].numpy().tolist()
     # for i in range(len(resultIndexList)):

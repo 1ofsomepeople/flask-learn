@@ -23,8 +23,12 @@ pip freeze >requirements.txt
 pip install -r requirements.txt
 安装项目依赖
 
-pip install torch==1.6.0+cpu torchvision==0.7.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
 安装 pytorch==1.6.0 torchvision==0.7.0 cpu版
+
+linux/windows安装
+pip install torch==1.6.0+cpu torchvision==0.7.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
+mac osx安装
+pip install torch==1.6.0 torchvision==0.7.0
 
 
 # 4. 项目运行和查看
