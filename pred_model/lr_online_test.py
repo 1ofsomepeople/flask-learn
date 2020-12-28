@@ -17,12 +17,14 @@ import os
 class OneHotProcess(nn.Module):
     def __init__(self, in_dim, hid_c):
         super(OneHotProcess, self).__init__()
+        # print(in_dim, hid_c) # 3 12
         self.embedding = nn.Embedding(in_dim, hid_c)
 
     def forward(self, source):
         source = source // 20 - 1
+        # print("source",source)
         source = self.embedding(source)
-
+        # print("source after embeding",source)
         return source
 
 class LinearRegression(nn.Module):
@@ -35,6 +37,7 @@ class LinearRegression(nn.Module):
         source = input_data.to(device)  # [B, N, src_len]
 
         input_feature = self.oneHotEmbed(source)  # [B, N, src_len, hid_dim]
+        # print("input_feature",input_feature)
 
         B, N, src_len, hid_c = input_feature.size()
 
@@ -106,12 +109,12 @@ def loadDataForPred():
     print(tensorData.type())
     return tensorData
 
-# if __name__ == '__main__':
+if __name__ == '__main__':
     # tensorData = loadDataForPred()
-    # tensorData = mockData()
-    # prediction = test(tensorData)
-    # print(prediction.size())
-    # resultIndexList = torch.max(prediction[0],1)[1].numpy().tolist()
-    # for i in range(len(resultIndexList)):
-    #     resultIndexList[i] = 20 + resultIndexList[i]*20
-    # print(resultIndexList)
+    tensorData = mockData()
+    prediction = test(tensorData)
+    print("prediction.size():",prediction.size())
+    resultIndexList = torch.max(prediction[0],1)[1].numpy().tolist()
+    for i in range(len(resultIndexList)):
+        resultIndexList[i] = 20 + resultIndexList[i]*20
+    # print("resultIndexList",resultIndexList)
