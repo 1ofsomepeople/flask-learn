@@ -21,8 +21,9 @@ class OneHotProcess(nn.Module):
 
     def forward(self, source):
         source = source // 20 - 1 # onehot标签 （0，0，0）  （0，1，0） 普通标签：0 1 2
-        source = self.embedding(source) 
-
+        # print("source",source)
+        source = self.embedding(source)
+        # print("source after embeding",source) 
         return source
 
 class LinearRegression(nn.Module):
@@ -35,6 +36,7 @@ class LinearRegression(nn.Module):
         source = input_data.to(device)  # [B, N, src_len]
 
         input_feature = self.oneHotEmbed(source)  # [B, N, src_len, hid_dim]
+        # print("input_feature",input_feature)
 
         B, N, src_len, hid_c = input_feature.size()
 

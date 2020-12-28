@@ -480,41 +480,57 @@ def poiSearchMain():
                 ]
 
     pointList = [
+        # {
+        #     "pointName": "八宝山地铁站", 
+        #     "roadSectionParam": [
+        #         ["上庄大街","NS","3"],
+        #         ["上庄大街","SN","1"]
+        #     ],
+        #     "fileName": "1_八宝山地铁站.csv"
+        # },
+        # {
+        #     "pointName": "马家堡地铁站", 
+        #     "roadSectionParam": [
+        #         ["马家堡西路","NS","1"],
+        #         ["马家堡西路","SN","5"]
+        #     ],
+        #     "fileName": "2_马家堡地铁站.csv"
+        # },
+        # {
+        #     "pointName": "海淀黄庄地铁站", 
+        #     "roadSectionParam": [
+        #         ["知春路","EW","9"],
+        #         ["知春路","WE","1"],
+        #         ["中关村大街","NS","5"],
+        #         ["中关村大街","SN","6"],
+        #         ["中关村大街","NS","6"],
+        #         ["中关村大街","SN","5"]
+        #     ],
+        #     "fileName": "3_海淀黄庄地铁站.csv"
+        # },
+        # {
+        #     "pointName": "望京地铁站", 
+        #     "roadSectionParam": [
+        #         ["广顺北大街","NS","7"],
+        #         ["广顺北大街","SN","2"]
+        #     ],
+        #     "fileName": "4_望京地铁站.csv"
+        # },
         {
-            "pointName": "八宝山地铁站", 
+            "pointName": "西直门", 
             "roadSectionParam": [
-                ["上庄大街","NS","3"],
-                ["上庄大街","SN","1"]
+                ["西直门北大街","NS","1"],
+                ["西直门北大街","SN","1"]
             ],
-            "fileName": "1_八宝山地铁站.csv"
+            "fileName": "5_西直门.csv"
         },
         {
-            "pointName": "马家堡地铁站", 
+            "pointName": "三元桥", 
             "roadSectionParam": [
-                ["马家堡西路","NS","1"],
-                ["马家堡西路","SN","5"]
+                ["北三环东路辅路（外环）","EW","1"],
+                ["北三环东路辅路（内环）","WE","1"]
             ],
-            "fileName": "2_马家堡地铁站.csv"
-        },
-        {
-            "pointName": "海淀黄庄地铁站", 
-            "roadSectionParam": [
-                ["知春路","EW","9"],
-                ["知春路","WE","1"],
-                ["中关村大街","NS","5"],
-                ["中关村大街","SN","6"],
-                ["中关村大街","NS","6"],
-                ["中关村大街","SN","5"]
-            ],
-            "fileName": "3_海淀黄庄地铁站.csv"
-        },
-        {
-            "pointName": "望京地铁站", 
-            "roadSectionParam": [
-                ["广顺北大街","NS","7"],
-                ["广顺北大街","SN","2"]
-            ],
-            "fileName": "4_望京地铁站.csv"
+            "fileName": "6_三元桥.csv"
         },
     ] 
     
@@ -766,9 +782,9 @@ def selectTimeProcess(fileName):
 
 # 绘制图表
 def createPic():
-    fileName = '6poi连续9个月早高峰_8-30-120.csv'
-    readCsv = pd.read_csv(fileName)
-    timeIndex = np.array(readCsv.values)[:,0].tolist()
+    # fileName = '6poi连续9个月早高峰_8-30-120.csv'
+    # readCsv = pd.read_csv(fileName)
+    # timeIndex = np.array(readCsv.values)[:,0].tolist()
 
     # # 每隔5列 选取数据
     # selectData = np.array(readCsv.values)[:, index+1::5]
@@ -779,18 +795,19 @@ def createPic():
     # 预测的时间
     # predictTime = readCsv.columns.values.tolist()[index-10]
 
-    plt.subplot(2,1,1)
-    plt.xticks([]), plt.yticks([])
+    # plt.subplot(2,1,1)
+    # plt.xticks([]), plt.yticks([])
     # plt.text(0.5,0.5, 'subplot(2,1,1)',ha='center',va='center',size=24,alpha=.5)
 
-    plt.subplot(2,1,2)
-    plt.xticks([]), plt.yticks([])
+    # plt.subplot(2,1,2)
+    # plt.xticks([]), plt.yticks([])
     # plt.text(0.5,0.5, 'subplot(2,1,2)',ha='center',va='center',size=24,alpha=.5)
 
     # plt.savefig('../figures/subplot-horizontal.png', dpi=64)
     plt.show()
 
 if __name__ == '__main__':
+    # poiSearchMain()
     # getPoiLongTime()
     # selectTimeProcess('6poi连续9个月早高峰_8-30-60.csv')
     # createPic()
@@ -798,9 +815,17 @@ if __name__ == '__main__':
     # print(fileList[-1])
     # romoveMongoData(datetime.datetime(2019, 12, 31, 23, 59))
     # res = mongoSearch('知春路', '2020-02-11 00:10', '2020-02-11 09:40', 'EW', '9')
-    # for i in res:
-    #     print(i)
+    # res = mongoSearch("中关村东路", "2020-10-19 00:00", "2020-10-19 23:59", "NS", "4")
+    # for i in range(len(res)):
+    #     res[i] = res[i]['txtInfo']['speed']
+    # print(res)
     # print(len(res))
     # roadName2Json()
     # fileList = getAllFilePathList(dataRootPath,11)
+    fileName = '7poi连续9个月每周的平均早高峰.csv'
+    readCsv = pd.read_csv(fileName)
+    selectData = np.array(readCsv.values)[:, -6].tolist()
+    print(selectData)
+    print(len(selectData))
+
     
