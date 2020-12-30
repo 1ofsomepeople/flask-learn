@@ -79,6 +79,10 @@ def test(test_data):
 
     model = model.to(device)
 
+    # 计算模型参数数量
+    total = sum([param.nelement() for param in model.parameters()])
+    print("Number of parameter: %.2f" % (total)) # Number of parameter: 471.00
+
     prediction = model(test_data, device)
 
     return prediction
@@ -112,10 +116,10 @@ def loadDataForPred():
     print(tensorData.type())
     return tensorData
 
-# if __name__ == '__main__':
+if __name__ == '__main__':
     # tensorData = loadDataForPred()
-    # tensorData = mockData()
-    # prediction = test(tensorData)
+    tensorData = mockData()
+    prediction = test(tensorData)
     # print("prediction.size():",prediction.size())
     # resultIndexList = torch.max(prediction[0],1)[1].numpy().tolist()
     # for i in range(len(resultIndexList)):

@@ -26,8 +26,10 @@ def load_graph():
         file_name = os.path.join(path,'pred_model','graph.npz')
 
     graph_data = np.load(file_name)
-    src_id = graph_data["src_id"]
-    dst_id = graph_data["dst_id"]
+    # 得到的是一个从源节点id list src_id到目标节点id list dst_id的边的结构
+    # 有226801条边，有自环
+    src_id = graph_data["src_id"] # length 226801
+    dst_id = graph_data["dst_id"] # length 226801
 
     return list(src_id), list(dst_id)
 
@@ -123,6 +125,10 @@ def test(test_data):
 
     model = model.to(device)
 
+    # 计算模型参数数量
+    total = sum([param.nelement() for param in model.parameters()])
+    print("Number of parameter: %.2f" % (total)) # Number of parameter: 146631.00
+
     prediction = model(test_data, device)
 
     return prediction
@@ -141,12 +147,16 @@ def mockData():
 #     prediction = test(test_data)
 #     print(prediction.size())
 
-# if __name__ == '__main__':
+if __name__ == '__main__':
     # src_id, dst_id = load_graph()
     # print(len(src_id))
     # print(len(dst_id))
-    # tensorData = mockData()
-    # prediction = test(tensorData)
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # sagepkl = torch.load('sage.pkl', map_location=device)
+    # graphnpz = np.load("graph.npz")
+    # print(graphnpz)
+    tensorData = mockData()
+    prediction = test(tensorData)
 #     print(prediction.size())
 #     resultIndexList = torch.max(prediction[0],1)[1].numpy().tolist()
 #     for i in range(len(resultIndexList)):
