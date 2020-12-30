@@ -112,7 +112,7 @@ def loadDataForPred():
     print(tensorData.type())
     return tensorData
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
     # tensorData = loadDataForPred()
     # tensorData = mockData()
     # prediction = test(tensorData)

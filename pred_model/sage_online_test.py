@@ -141,7 +141,7 @@ def mockData():
 #     prediction = test(test_data)
 #     print(prediction.size())
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
     # src_id, dst_id = load_graph()
     # print(len(src_id))
     # print(len(dst_id))

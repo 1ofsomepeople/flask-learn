@@ -173,3 +173,33 @@ def getPredData(inputDataIndex = 0, method = 'lr', dataName='data.csv'):
         "precision":precision, # 总体的准确率，等同于scorePrecision
     }
     return predObj
+
+# 处理点数据示例.csv wgs84坐标转换到gcj02
+def processPointData():
+    # 读csv，生成dataFrame
+    readCsv = pd.read_csv("点数据示例.csv")
+    # 数据数组
+    points = np.array(readCsv.values).tolist()
+    # 表头
+    header = readCsv.columns.values.tolist()
+
+    for index in range(len(points)):
+        curData = points[index]
+        lon = float(curData[0].split(',')[0])
+        lat = float(curData[0].split(',')[1])
+        lonlat = list(convertor.wgs84_to_gcj02(lon,lat))
+        lon = lonlat[0]
+        lat = lonlat[1]
+        lonlat = str(lon)+','+str(lat)
+        points[index][0] = lonlat
+
+    # numpy转pandas
+    readCsv = pd.DataFrame(points)
+    # 修改DataFrame的列名
+    readCsv.columns = header
+    # 保存成csv文件
+    fileName = '点数据示例gcj02.csv'
+    readCsv.to_csv(fileName,index=0,encoding='utf_8_sig')
+
+# if __name__ == '__main__':
+#     processPointData()
