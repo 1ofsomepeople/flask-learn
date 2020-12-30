@@ -17,19 +17,21 @@ import os
 class OneHotProcess(nn.Module):
     def __init__(self, in_dim, hid_c):
         super(OneHotProcess, self).__init__()
-        self.embedding = nn.Embedding(in_dim, hid_c) # 生成一个固定维度的矩阵
+        # print(in_dim, hid_c) # 3 12
+        self.embedding = nn.Embedding(in_dim, hid_c)
 
     def forward(self, source):
-        source = source // 20 - 1 # onehot标签 （0，0，0）  （0，1，0） 普通标签：0 1 2
+        source = source // 20 - 1
         # print("source",source)
         source = self.embedding(source)
-        # print("source after embeding",source) 
+        # print("source after embeding",source)
         return source
 
 class LinearRegression(nn.Module):
     def __init__(self, in_dim, hid_c, src_len):
+        # in_dim, hid_c, src_len 3,12,12
         super(LinearRegression, self).__init__()
-        self.oneHotEmbed = OneHotProcess(in_dim, hid_c) #in_dim 输入维度  hid ：hidden
+        self.oneHotEmbed = OneHotProcess(in_dim, hid_c)
         self.linear = nn.Linear(src_len * hid_c, in_dim)
 
     def forward(self, input_data, device):
@@ -38,11 +40,11 @@ class LinearRegression(nn.Module):
         input_feature = self.oneHotEmbed(source)  # [B, N, src_len, hid_dim]
         # print("input_feature",input_feature)
 
-        B, N, src_len, hid_c = input_feature.size()
+        B, N, src_len, hid_c = input_feature.size() # 1 17531 12 12
 
-        input_feature = input_feature.view(B, N, -1)  # [B, N, src_len * hid_dim]  # resize
+        input_feature = input_feature.view(B, N, -1)  # [B, N, src_len * hid_dim]
 
-        out_feature = F.relu(self.linear(input_feature)) # [B, N, in_dim] #线性回归+激活函数
+        out_feature = F.relu(self.linear(input_feature)) # [B, N, in_dim]
 
         predict = F.softmax(out_feature, dim=-1)
 
@@ -54,7 +56,7 @@ def test(test_data):
     test_data: [B, N, src_len]  20, 40, 60
     prediction: [B, N, in_dim]
     """
-    # 用CPU或者GPU
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     file_name = "lr.pkl"
@@ -64,20 +66,20 @@ def test(test_data):
     elif(os.path.split(path)[-1] == 'flask-learn'):
         file_name = os.path.join(path,'pred_model','lr.pkl')
 
-    checkpoint = torch.load(file_name, device) # .pth   load权重，类型：dic
-    print(checkpoint)
-    model_para = checkpoint["model"] # load权重的参赛
-    option = checkpoint["setting"] # 某些参数设置
+    checkpoint = torch.load(file_name, device)
+    model_para = checkpoint["model"]
+    option = checkpoint["setting"]
 
-    cudnn.benchmark = True  # 无用设置
+    cudnn.benchmark = True 
+    # print("option.hid_c:", option.hid_c) # 12
+    # print("option.h_step:", option.h_step) # 12
+    model = LinearRegression(3, option.hid_c, option.h_step) # 3,12,12
 
-    model = LinearRegression(3, option.hid_c, option.h_step) # 模型实例
+    model.load_state_dict(model_para)
 
-    model.load_state_dict(model_para) # load权重
+    model = model.to(device)
 
-    model = model.to(device) # 模型放到CPU或者GPU
-
-    prediction = model(test_data, device) # 得到预测
+    prediction = model(test_data, device)
 
     return prediction
 
@@ -91,9 +93,10 @@ def test(test_data):
 def mockData():
     # 生成17531*12的二维数组
     timeData = [[random.randrange(20,61,20) for col in range(12)] for row in range(17531)]
-    tensorData = torch.Tensor(timeData).unsqueeze(0).long()
-    print(tensorData.size())
-    print(tensorData.type())
+    # 对数据维度进行扩充。给指定位置加上维数为一的维度，比如原本有个三行的数据（3），unsqueeze(0)后就会在0的位置加了一维就变成一行三列（1,3）
+    tensorData = torch.Tensor(timeData).unsqueeze(0).long() 
+    # print(tensorData.size()) # torch.Size([1, 17531, 12])
+    # print(tensorData.type()) # torch.LongTensor
     return tensorData
 
 # 加载用于模型预测的数据
@@ -111,10 +114,10 @@ def loadDataForPred():
 
 if __name__ == '__main__':
     # tensorData = loadDataForPred()
-    tensorData = mockData()
-    prediction = test(tensorData)
-    # print(prediction.size())
+    # tensorData = mockData()
+    # prediction = test(tensorData)
+    # print("prediction.size():",prediction.size())
     # resultIndexList = torch.max(prediction[0],1)[1].numpy().tolist()
     # for i in range(len(resultIndexList)):
     #     resultIndexList[i] = 20 + resultIndexList[i]*20
-    # print(resultIndexList)
+    # print("resultIndexList",resultIndexList)

@@ -12,20 +12,10 @@ import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 import dgl.nn as gnn
 # from transform_dataset import TrafficData
-import random
-import pandas as pd
-import os
+
 
 def load_graph():
-
-    file_name = "graph.npz"
-    path=os.path.abspath('.')   #表示执行环境的绝对路径
-    if(os.path.split(path)[-1] == 'pred_model'):
-        file_name = os.path.join(path,'graph.npz')
-    elif(os.path.split(path)[-1] == 'flask-learn'):
-        file_name = os.path.join(path,'pred_model','graph.npz')
-
-    graph_data = np.load(file_name)
+    graph_data = np.load("graph.npz")
     src_id = graph_data["src_id"]
     dst_id = graph_data["dst_id"]
 
@@ -99,19 +89,12 @@ def test(test_data):
     prediction: [B, N, in_dim]
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
- 
+
     file_name = "sage.pkl"
-    path=os.path.abspath('.')   #表示执行环境的绝对路径
-    if(os.path.split(path)[-1] == 'pred_model'):
-        file_name = os.path.join(path,'sage.pkl')
-    elif(os.path.split(path)[-1] == 'flask-learn'):
-        file_name = os.path.join(path,'pred_model','sage.pkl')
 
     checkpoint = torch.load(file_name, map_location=device)
     model_para = checkpoint["model"]
-    print(model_para)
     option = checkpoint["setting"]
-    print(option)
 
     cudnn.benchmark = True
 
@@ -127,28 +110,9 @@ def test(test_data):
 
     return prediction
 
-def mockData():
-    # 生成17531*12的二维数组
-    timeData = [[random.randrange(20,61,20) for col in range(12)] for row in range(17531)]
-    tensorData = torch.Tensor(timeData).unsqueeze(0).long()
-    # print(tensorData.size())
-    # print(tensorData.type())
-    return tensorData
 
 # if __name__ == '__main__':
 #     test_set = TrafficData(folder="data", train_ratio=0.6, valid_ratio=0.2, data_type="test", h_step=12, f_step=1)
 #     test_data = torch.cat((test_set[0]["x"].unsqueeze(0), test_set[1]["x"].unsqueeze(0)), dim=0)
 #     prediction = test(test_data)
 #     print(prediction.size())
-
-if __name__ == '__main__':
-    # src_id, dst_id = load_graph()
-    # print(len(src_id))
-    # print(len(dst_id))
-    # tensorData = mockData()
-    # prediction = test(tensorData)
-#     print(prediction.size())
-#     resultIndexList = torch.max(prediction[0],1)[1].numpy().tolist()
-#     for i in range(len(resultIndexList)):
-#         resultIndexList[i] = 20 + resultIndexList[i]*20
-#     print(resultIndexList)
