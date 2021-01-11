@@ -48,6 +48,7 @@ class OneHotProcess(nn.Module):
 
 class SAGEModel(nn.Module):
     def __init__(self, src_id, dst_id, in_c, hid_c, n_layers, device):
+        # print(in_c, hid_c, n_layers) 144 144 2
         super(SAGEModel, self).__init__()
         self.graph = dgl.graph((src_id, dst_id), device=device)
 
@@ -56,10 +57,13 @@ class SAGEModel(nn.Module):
         self.residual = nn.ModuleList([nn.Identity() if i != 0 else nn.Linear(in_c, hid_c) for i in range(n_layers)])
 
     def forward(self, features):
-        input_features = features
+        input_features = features # [17531, 1, 144]
+        # print(input_features.size())
         for i, conv in enumerate(self.gcn):
             output_features = F.relu(conv(self.graph, input_features)) + self.residual[i](input_features)
             input_features = output_features
+
+            # print(input_features.size()) 17531 1 144
 
         return input_features
 
@@ -82,15 +86,15 @@ class PredictModel(nn.Module):
 
         input_feature = self.oneHotEmbed(source)
 
-        B, N, src_len, hid_c = input_feature.size()
+        B, N, src_len, hid_c = input_feature.size() # [1, 17531, 12, 12]
 
         input_feature = input_feature.view(B, N, -1).permute(1, 0, 2)  # [N, B, src_len * hid_c]
 
-        output_feature = self.model(input_feature)  # [N, B, hid_c]
+        output_feature = self.model(input_feature)  # [N, B, hid_c] [17531,1,144]
 
-        output_feature = self.linear(output_feature)  # [N, B, in_dim]
+        output_feature = self.linear(output_feature)  # [N, B, in_dim] [17531,1,3]
 
-        predict = F.softmax(output_feature, dim=-1).permute(1, 0, 2)  # [B, N, in_dim]
+        predict = F.softmax(output_feature, dim=-1).permute(1, 0, 2)  # [B, N, in_dim] [1,17531,3]
 
         return predict
 
@@ -111,14 +115,15 @@ def test(test_data):
 
     checkpoint = torch.load(file_name, map_location=device)
     model_para = checkpoint["model"]
-    print(model_para)
+    # print(model_para)
     option = checkpoint["setting"]
-    print(option)
+    # print(option)
 
     cudnn.benchmark = True
 
     src_id, dst_id = load_graph()
 
+    # option.hid_c, option.h_step, option.n_layer 12 12 2
     model = PredictModel(option.model, src_id, dst_id, 3, option.hid_c, option.h_step, option.n_layer, device)
 
     model.load_state_dict(model_para)
