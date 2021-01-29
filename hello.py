@@ -113,4 +113,5 @@ if __name__ == "__main__":
     # 在调试模式下，Flask的重新加载器将加载烧瓶应用程序两次。因此flask总共有两个进程. 重新加载器监视文件系统的更改并在不同的进程中启动真实应用程序
     # 有几种方法可以解决这个问题。我发现效果最好的是禁用重新加载器：app.run(use_reloader=False) 或者关闭调试模式debug mod
     # 解决定时器程序，一个interval运行两次的bug
-    app.run(host='0.0.0.0', port=5000, use_reloader=False)
+    # app.run(host='0.0.0.0', port=5000, use_reloader=False)
+    app.run(use_reloader=False,debug=False)
