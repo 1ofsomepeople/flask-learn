@@ -201,5 +201,16 @@ def processPointData():
     fileName = '点数据示例gcj02.csv'
     readCsv.to_csv(fileName,index=0,encoding='utf_8_sig')
 
+# csv行列互换
+def reverseCSV(path):
+    df = pd.read_csv(path)
+    data = df.values  # data是数组，直接从文件读出来的数据格式是数组
+    index1 = list(df.keys())  # 获取原有csv文件的标题，并形成列表
+    data = list(map(list, zip(*data)))  # map()可以单独列出列表，将数组转换成列表
+    data = pd.DataFrame(data, index=index1)  # 将data的行列转换
+    data.to_csv(r'reverseCsv.csv', header=0,encoding='utf_8_sig')
+
+
 # if __name__ == '__main__':
-#     processPointData()
+    # processPointData()
+    # reverseCSV("2019-04-02.csv")

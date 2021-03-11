@@ -61,7 +61,8 @@ client = MongoClient('mongodb://localhost:27017/')
 # 原始数据的根目录
 dataRootPath = 'E:\\traffic_data\\2.yang_traffic_data' 
 # MongoDB实例client 数据库trafficData 集合roadData
-collection = client.trafficData.roadData
+collection = client.trafficData.roadData # 交通委数据集合
+collectionJam = client.trafficData.jamData  # 百度拥堵数据集合
 # 测试集合
 testCollection = client.test.testCollection
 # 测试json数据文件
@@ -806,6 +807,21 @@ def createPic():
     # plt.savefig('../figures/subplot-horizontal.png', dpi=64)
     plt.show()
 
+# 将数据插入 mongoDB的百度拥堵数据集合
+def insertMongoJamCollection():
+    df = pd.read_csv("2019-04-02.csv")
+    data = df.values  # data是数组，直接从文件读出来的数据格式是数组
+    index = list(df.keys())  # 获取csv文件的标题，并形成列表
+    data = list(map(list, zip(*data)))  # map()可以单独列出列表，将数组转换成列表
+
+    # 要插入的数据
+    insertData = []
+    for i in range(len(data)):
+        insertData.append({index[i]:data[i]})
+    print(len(data))
+    print(len(index))
+    collectionJam.insert_many(insertData)
+
 if __name__ == '__main__':
     # poiSearchMain()
     # getPoiLongTime()
@@ -822,10 +838,11 @@ if __name__ == '__main__':
     # print(len(res))
     # roadName2Json()
     # fileList = getAllFilePathList(dataRootPath,11)
-    fileName = '7poi连续9个月每周的平均早高峰.csv'
-    readCsv = pd.read_csv(fileName)
-    selectData = np.array(readCsv.values)[:, -6].tolist()
-    print(selectData)
-    print(len(selectData))
+    # fileName = '7poi连续9个月每周的平均早高峰.csv'
+    # readCsv = pd.read_csv(fileName)
+    # selectData = np.array(readCsv.values)[:, -6].tolist()
+    # print(selectData)
+    # print(len(selectData))
+    insertMongoJamCollection()
 
     
