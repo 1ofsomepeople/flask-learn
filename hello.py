@@ -58,17 +58,18 @@ def hello():
     return "Hello World1!"
 
 
-# load当前时间的实时拥堵数据
+# 加载实时拥堵数据
 @app.route('/data/')
 def getRealTimeData():
-    dataObj = {}
+
+    #! 删除了哪个文件夹下的所有".png"文件？为什么要删除？
     for file in os.listdir():
-        if (file.endswith(".png")):
+        if file.endswith(".png"):
             file_path = os.path.join(os.getcwd(), file)
             os.remove(file_path)
 
     dataObj = download.downloadMain()
-    print('res' + str(len(dataObj['data'])))
+    
     return jsonify(dataObj)
 
 

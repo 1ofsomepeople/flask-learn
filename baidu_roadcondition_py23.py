@@ -75,21 +75,21 @@ def showBmap(my_url):
     # opener = urllib.request.build_opener(proxy, urllib.request.HTTPHandler)
     # urllib.request.install_opener(opener)
 
-    try:  #python2
+    try:  # python2
         file = cStringIO.StringIO(urllib2.urlopen(my_url).read())
-    except NameError:  #python3
+    except NameError:  # python3
         file = io.BytesIO(urllib.request.urlopen(my_url, timeout=3).read())
     try:
         img = Image.open(file)
         img = img.convert("RGB")
     except IOError:
-        #        print('fail to convert')
+        # print('fail to convert')
         return np.zeros((size, size))
-    urlparam = parse_qs(urlparse(my_url).query)
+    
+    urlparam = parse_qs(urlparse(my_url).query)                                                         #! 这一行代码做了什么？
     level = int(urlparam['level'][0])
     tile_x = int(urlparam['x'][0])
     tile_y = int(urlparam['y'][0])
-
     tileName = str(tile_x) + str(tile_y)
 
     if (tileName in tilePoint.keys()):
@@ -102,7 +102,6 @@ def showBmap(my_url):
                 g = G / (R + G + B)
                 b = 1 - r - g
                 value = png2json.RGB2Value(r, g, b)
-
                 resJsonData.append([temppoint[2], temppoint[3], value])
             else:
                 # print('RGB和不大于0',tileName,temppoint,R,G,B)
@@ -115,18 +114,17 @@ def down_a_map(time_now, start_x, start_y, x_range, y_range, level):
     # start_x = 25265
     # start_y = 9386
     # level = 17
-
-    size = 256
     # x_range = 48
     # y_range = 48
+    size = 256
 
     # tile_x,tile_y is (10,)
     tile_x = np.arange(start_x - x_range, start_x, 1)
     tile_y = np.arange(start_y - y_range, start_y, 1)
+
     # creat a 3 axis array. The size of myMap is (2560,2560,3), type is uint8
-    myMap = np.zeros((len(tile_y) * size, len(tile_x) * size, 3),
-                     dtype='uint8')
-    address = 'http://its.map.baidu.com:8002/traffic/TrafficTileService?'  # level=13&x=1580&y=589&time=1507687074027&v=081&smallflow=1&scaler=1
+    myMap = np.zeros((len(tile_y) * size, len(tile_x) * size, 3), dtype='uint8')
+    address = 'http://its.map.baidu.com:8002/traffic/TrafficTileService?'
 
     # tiles start from (3158,1173) to (3167,1182), left_bottom to right_top
     # i,j is in 1~10
@@ -134,31 +132,13 @@ def down_a_map(time_now, start_x, start_y, x_range, y_range, level):
         # print(i)
         for j in range(len(tile_y)):
             # print(i,j)
-            #url_ij = address+('x=%d&y=%d&z=%d')%(tile_x[i],tile_y[j],level)
+            # url_ij = address+('x=%d&y=%d&z=%d')%(tile_x[i],tile_y[j],level)
             url_ij = address + ('level=%d&x=%d&y=%d&time=%d') % (
                 level, tile_x[i], tile_y[j], time_now)
             # print(url_ij)
             temp = showBmap(url_ij)
 
-            # 存图功能-下载瓦片地图的图片RGB矩阵
-            '''
-            # if url_ij can be convert to RGB, temp.size = (256,256)
-            # print(temp.size)
-            # If this tile is empty, there is no way in picture. 
-            # temp = np.zeros((256,256)). temp.size=65536. Otherwise, temp.size=(256,256)
-            if temp.size == 65536:
-#                print('There is no way in this tile')
-                temp_3 =np.zeros((256,256,3))
-                temp_3[:,:,0] = temp
-                temp_3[:,:,1] = temp
-                temp_3[:,:,2] = temp
-                temp = temp_3
-            # 10*10 tiles convert to a png
-            myMap[ (y_range-j-1)*size:(y_range-j)*size ,i*size:(i+1)*size   ,: ] = np.array(temp)
-            # position = real_coordinate(tile_x[i],tile_y[j],level) 
-            # print(position)
-            '''
-    return myMap
+    return myMap                                                                                            #! myMap有修改过吗？
 
 
 class MyThread(Thread):
@@ -180,22 +160,16 @@ class MyThread(Thread):
                                          self.y_range, self.level)
                 break
             except Exception as e:
-                # print(e)
+
                 time.sleep(2)
                 try_times -= 1
+
                 if (try_times > 0):
-                    # print("retry it:" + str(try_times))
                     pass
                 else:
                     print("retry fail")
                     print(e)
                     os.kill(os.getpid(), signal.SIGKILL)
-
-                    # pid_need_kill = os.getpid()
-                    # instruction =  "/home/dingchaofan/anaconda3/bin/python baidu_roadcondition_py23.py " +str(self.level)+" Y "+str(pid_need_kill)
-                    # os.system(instruction)
-                    # print("kill process")
-                    # os.kill(os.getpid(), signal.SIGKILL)
 
     def get_result(self):
         return self.result
@@ -253,21 +227,22 @@ def PIL_Save_Merge(ssListForVstack, file_name):
     print("time_PIL merge time:" + str(time_PIL2 - time_PIL1))
 
 
-# 由当前时间生成访问url的时间戳和要保存的文件名
-def creat_file_name():
 
+def creat_file_name():
+    '''由当前时间生成访问url的时间戳和要保存的文件名'''
+    
     time_now = int(time.time())
     time_local = time.localtime(time_now)
 
     file_name = time.strftime("%Y-%m-%d_%H-%M-%S", time_local)
     timestamp = time_now * 1000.0
-    
+
     return timestamp, file_name
 
 
 # 多线程下载图片,传入要下载的地图的各个参数值
 def Multi_Thread_DownLoad(timestamp, file_name, TitleRight, TitleTop,
-                          TileRange, threadNum, mapLevel):
+                          TileRange, threadNum, mapLevel):                                                  #! 这个函数是在做什么，他没有返回值
     # 多线程下载图片
     # 保存各个线程的数组
     threadSize = TileRange // threadNum  # 每个线程中的tiles行/列个数 注意要是整数int，否则会报错
@@ -275,8 +250,7 @@ def Multi_Thread_DownLoad(timestamp, file_name, TitleRight, TitleTop,
 
     # 多线程下载任务启动
     time_download_start = int(time.time())
-    print("download start:" + time.strftime(
-        "%Y-%m-%d %H:%M:%S", time.localtime(time_download_start)))
+    print("download start:" + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time_download_start)))
     for i in range(threadNum):
         for j in range(threadNum):
             ssTemp = MyThread(timestamp, TitleRight - j * threadSize,
@@ -284,90 +258,27 @@ def Multi_Thread_DownLoad(timestamp, file_name, TitleRight, TitleTop,
                               threadSize, mapLevel)
             ssList.append(ssTemp)
 
-    for index in range(len(ssList)):
-        ssList[index].start()
+    for item in ssList:
+        item.start()    # start方法开启一个新线程。把需要并行处理的代码放在run()方法中，start()方法启动线程将自动调用run()方法。
 
-    for index in range(len(ssList)):
-        ssList[index].join()
+    for item in ssList:
+        item.join()
+
 
     time_merge_start = int(time.time())
     print("download time:" + str(time_merge_start - time_download_start))
-    print("merge start:" +
-          time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time_merge_start)))
+    print("merge start:" + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time_merge_start)))
 
-    # 存图功能-merge图片的矩阵
-    ''' 
-    ssListForhstack = []
-    ssListForVstack = []
-
-    ssListForhstack.append(ssList[-1].get_result())
-
-    for index in range(len(ssList)-2,-1,-1):
-        if(index%threadNum == threadNum-1):
-            ssListForVstack.append(np.concatenate((ssListForhstack[:]), axis=1))
-            ssListForhstack = []
-            ssListForhstack.append(ssList[index].get_result())
-        else:
-            ssListForhstack.append(ssList[index].get_result())
-    ssListForVstack.append(np.concatenate((ssListForhstack[:]), axis=1))
-    '''
-
-    # temp = np.hstack((temp, ssList[index-i].get_result()))
-    # temp = np.concatenate((temp, ssList[index-i].get_result()), axis=1)
-    # 用concatenate优化vstack和hstack，可以加速矩阵的合并操作
-    # np.vstack((a,a))                # 0.000063
-    # np.concatenate((a,a), axis=0)   # 0.000040
 
     time_merge_stage1 = int(time.time())
-    print(
-        "merge stage 1 finished:" +
-        time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time_merge_stage1)))
+    print("merge stage 1 finished:" + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time_merge_stage1)))
     print("merge stage 1 time:" + str(time_merge_stage1 - time_merge_start))
 
-    # 存图功能-保存merge后的图片
-    # concatenateSave(ssListForVstack,file_name)
 
     time_finish = int(time.time())
-    print("finish start:" +
-          time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time_finish)))
+    print("finish start:" + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time_finish)))
     print("merge time:" + str(time_finish - time_merge_start))
 
-
-'''
-#coding:UTF-8
-import time
-#获取当前时间
-time_now = int(time.time())
-#转换成localtime
-time_local = time.localtime(time_now)
-#转换成新的时间格式(2016-05-09 18:59:20)
-dt = time.strftime("%Y-%m-%d %H:%M:%S",time_local)
-
-#转换成时间数组
-timeArray = time.strptime(dt, "%Y-%m-%d %H:%M:%S")
-#转换成时间戳
-timestamp = time.mktime(timeArray)
-
-'''
-# sys.argv[0] 文件的路径什么的，本身就有的，不在输入的参数里
-# sys.argv[1] 图片等级
-'''
-# 弃置
-# sys.argv[2] 是否结束进程 Y/N
-# sys.argv[3] 之前进程的pid
-# 给定一个标志位，是否kill之前的进程
-# if(sys.argv[2] == 'Y'):
-#     # 结束之前的进程，如果有的话
-#     os.kill(int(sys.argv[3]), signal.SIGKILL)
-#     print("kill a old process")
-# else:
-#     print("First time to excute this process")
-'''
-# targetUrl = "https://proxy.horocn.com/api/v2/proxies?order_id=RJ9Y1648150289620460&num=1&format=text&line_separator=win&can_repeat=no"
-# resp = requests.get(targetUrl)
-# # print(resp.text)
-# resip = resp.text.split('\r\n')
-# print(resip[0])
 
 
 def downloadMain(levelParam=14):
@@ -376,26 +287,22 @@ def downloadMain(levelParam=14):
     global resJsonData
 
     time_process_start = int(time.time())
-    print(
-        "process start:" +
-        time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time_process_start)))
+    print("process start:" + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time_process_start)))
 
     # 由当前时间生成访问url的时间戳和要保存的文件名
     timestamp, file_name = creat_file_name()
 
-    # 线程和任务的各个参数
+    # 线程和任务的各个参数                                                                                   #! 这些参数是什么意思
     mapParameter_default14 = [3171, 1186, 16, 2, 14]
     # level = int(sys.argv[1])
     level = levelParam
     baselevel = 14
     levelup = level - baselevel
-    TitleRight = mapParameter_default14[0] * (2**levelup)  #12684 25368
-    TitleTop = mapParameter_default14[1] * (2**levelup)  # 4744 9488
-    TileRange = mapParameter_default14[2] * (2**levelup
-                                             )  # 64 128 # 每行/列tiles个数
-    threadNum = mapParameter_default14[
-        3]  # * (2**levelup)# 32 64 # 8*8 64个线程并行
-    mapLevel = mapParameter_default14[4] + levelup  # 16 17 # 地图等级
+    TitleRight  = mapParameter_default14[0] * (2**levelup)  # 12684 25368
+    TitleTop    = mapParameter_default14[1] * (2**levelup)  # 4744 9488
+    TileRange   = mapParameter_default14[2] * (2**levelup)  # 64 128 # 每行/列tiles个数
+    threadNum   = mapParameter_default14[3]                 # 8*8 64个线程并行
+    mapLevel    = mapParameter_default14[4] + levelup       # 16 17 # 地图等级
 
     if (level <= 17):
         # 更新线程参数，不能整太多、太频繁，容易被封IP 线程过多会导致[Errno 104] Connection reset by peer
@@ -411,11 +318,9 @@ def downloadMain(levelParam=14):
             Multi_Thread_DownLoad(timestamp, file_name, TitleRight, TitleTop,
                                   TileRange, threadNum, mapLevel)
 
-    print(len(resJsonData))
 
     resData = copy.copy(resJsonData)
     resJsonData.clear()
-
     jsonData = {'jsonName': file_name, 'data': resData}
 
     return jsonData
