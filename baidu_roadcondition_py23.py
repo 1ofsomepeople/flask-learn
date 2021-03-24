@@ -262,7 +262,7 @@ def Multi_Thread_DownLoad(timestamp, file_name, TitleRight, TitleTop,
         item.start()    # start方法开启一个新线程。把需要并行处理的代码放在run()方法中，start()方法启动线程将自动调用run()方法。
 
     for item in ssList:
-        item.join()
+        item.join()     # 等待子进程执行结束，主进程再往下执行
 
 
     time_merge_start = int(time.time())
