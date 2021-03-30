@@ -44,6 +44,7 @@ import numpy as np
 from PIL import Image
 
 Image.MAX_IMAGE_PIXELS = None
+
 import copy
 import random
 import threading
@@ -55,38 +56,41 @@ import requests
 import lnglat_mercator_tiles_convertor as convertor
 import png2json as png2json
 
-# tilePoint是从points.json中读取的点数据
-tilePoint = png2json.readpoints()
-# resJsonData结果的jsondata
-resJsonData = []
+tilePoint = png2json.readpoints() # points.json文件所含数据分类后的字典
+resJsonData = [] # downloadMain()返回结果的临时容器
 
 
-# show tile pictures 256*256
-def showBmap(my_url):
+# Todo注释未完成
+def showBmap(my_url:str) -> None:
+    '''获取拥堵等级信息.
+
+    1. 访问指定url并获取文件
+    2. 若指定瓦片存在，顺序访问瓦片中的坐标池，为每个坐标附加拥堵属性值，最后保存到全局变量resJsonData
+    '''
 
     # 引用全局变量
     global resJsonData
     global tilePoint
 
-    size = 256
-
-    # 随便选一个代理ip
-    # proxy = urllib.request.ProxyHandler({'http': resip[0]})
-    # opener = urllib.request.build_opener(proxy, urllib.request.HTTPHandler)
-    # urllib.request.install_opener(opener)
-
+    # 获取文件并打开 #! 是在内存中操作，未保存到本地吧？
     try:  # python2
         file = cStringIO.StringIO(urllib2.urlopen(my_url).read())
     except NameError:  # python3
         file = io.BytesIO(urllib.request.urlopen(my_url, timeout=3).read())
     try:
         img = Image.open(file)
-        img = img.convert("RGB")
+        img = img.convert("RGBA")
     except IOError:
-        # print('fail to convert')
-        return np.zeros((size, size))
+        return None
     
-    urlparam = parse_qs(urlparse(my_url).query)                                                         #! 这一行代码做了什么？
+    urlparam = parse_qs(urlparse(my_url).query)
+    '''
+    urlparse模块主要是用于解析url中的参数，对url按照一定格式进行拆分或拼接
+    将url分为6个部分，返回一个包含6个字符串项目的元组：scheme、netloc、path、params、query、fragment
+
+    parse_qs()将请求参数转换为字典
+    '''
+    
     level = int(urlparam['level'][0])
     tile_x = int(urlparam['x'][0])
     tile_y = int(urlparam['y'][0])
@@ -95,50 +99,50 @@ def showBmap(my_url):
     if (tileName in tilePoint.keys()):
         tempArr = tilePoint[tileName]
         for temppoint in tempArr:
-            R, G, B = img.getpixel((temppoint[0], 255 - temppoint[1]))
+            R, G, B, A = img.getpixel((temppoint[0], 255 - temppoint[1]))
             if (R + G + B > 0):
-                # RGB归一化 消除光照影响
+                # RGB归一化
                 r = R / (R + G + B)
                 g = G / (R + G + B)
-                b = 1 - r - g
-                value = png2json.RGB2Value(r, g, b)
+                b = 1.0 - r - g
+                value = png2json.RGB2Value(r, g, b) # value is in [0, 1, 3, 7, 10]
                 resJsonData.append([temppoint[2], temppoint[3], value])
             else:
-                # print('RGB和不大于0',tileName,temppoint,R,G,B)
+                # 对噪声赋值
                 resJsonData.append([temppoint[2], temppoint[3], 0])
-    return img
+    return None
 
 
-def down_a_map(time_now, start_x, start_y, x_range, y_range, level):
+
+
+# Todo注释未完成
+def down_a_map(time_now:int, start_x:int, start_y:int, x_range:int, y_range:int, level:int) -> None:
+    '''函数说明.
+
+    1. 根据参数生成要访问的URL
+    2. 调用showBmap()更改全局变量resJsonData
+    '''
 
     # start_x = 25265
     # start_y = 9386
-    # level = 17
-    # x_range = 48
-    # y_range = 48
-    size = 256
-
-    # tile_x,tile_y is (10,)
+    # level = 14
+    # x_range = 8
+    # y_range = 8
+    # tile_x,tile_y is (8,)
     tile_x = np.arange(start_x - x_range, start_x, 1)
     tile_y = np.arange(start_y - y_range, start_y, 1)
-
-    # creat a 3 axis array. The size of myMap is (2560,2560,3), type is uint8
-    myMap = np.zeros((len(tile_y) * size, len(tile_x) * size, 3), dtype='uint8')
     address = 'http://its.map.baidu.com:8002/traffic/TrafficTileService?'
 
-    # tiles start from (3158,1173) to (3167,1182), left_bottom to right_top
+    # tiles start from (3158,1173) to (3167,1182), left_bottom to right_top #! 这里的数值可能是错误的，也包括上面的注释
     # i,j is in 1~10
     for i in range(len(tile_x)):
-        # print(i)
         for j in range(len(tile_y)):
-            # print(i,j)
-            # url_ij = address+('x=%d&y=%d&z=%d')%(tile_x[i],tile_y[j],level)
-            url_ij = address + ('level=%d&x=%d&y=%d&time=%d') % (
-                level, tile_x[i], tile_y[j], time_now)
-            # print(url_ij)
-            temp = showBmap(url_ij)
+            url_ij = address + f'level={level}&x={tile_x[i]}&y={tile_y[j]}&time={time_now}'  # 14级瓦片坐标系的瓦片坐标
+            showBmap(url_ij)
 
-    return myMap                                                                                            #! myMap有修改过吗？
+    return None
+
+
 
 
 class MyThread(Thread):
@@ -155,15 +159,14 @@ class MyThread(Thread):
         try_times = 3
         while (try_times > 0):
             try:
-                self.result = down_a_map(self.time_now, self.start_x,
-                                         self.start_y, self.x_range,
-                                         self.y_range, self.level)
+                down_a_map(self.time_now, self.start_x,
+                            self.start_y, self.x_range,
+                            self.y_range, self.level)
                 break
-            except Exception as e:
 
+            except Exception as e:
                 time.sleep(2)
                 try_times -= 1
-
                 if (try_times > 0):
                     pass
                 else:
@@ -171,79 +174,31 @@ class MyThread(Thread):
                     print(e)
                     os.kill(os.getpid(), signal.SIGKILL)
 
-    def get_result(self):
-        return self.result
 
-
-# 三种merge stage2的保存方式：
-
-
-# 1.用concatenate方法在np.array上进行合并并保存
-def concatenateSave(ssListForVstack, file_name):
-
-    # 用concatenate方法在np.array上进行合并并保存
-    time_concatenate1 = int(time.time())
-    # print(len(ssListForVstack))
-    ss = np.concatenate((ssListForVstack[::-1]), axis=0)
-    plt.imsave(file_name + '.png', ss)
-
-    time_concatenate2 = int(time.time())
-    print("concatenate merge time:" +
-          str(time_concatenate2 - time_concatenate1))
-
-
-# 2.用fromarray方法把np.array转换到PIL并保存，与concatenateSave耗时相当
-def fromarraySave(ssListForVstack, file_name):
-    time_fromarray1 = int(time.time())
-
-    # print(dt)
-    ss = np.concatenate((ssListForVstack[::-1]), axis=0)
-    img = Image.fromarray(ss).convert('RGBA')
-    img.save(file_name + 'fromarray.png')
-
-    time_fromarray2 = int(time.time())
-    print("fromarray merge time:" + str(time_fromarray2 - time_fromarray1))
-
-
-# 3.用PIL方法先存再读，再合并，经测试，耗时太久。
-def PIL_Save_Merge(ssListForVstack, file_name):
-    # 用PIL方法先存再读，再合并
-    time_PIL1 = int(time.time())
-    img_arr = []
-    toImage = Image.new('RGBA', (TileRange * 256, TileRange * 256))
-
-    for i in range(len(ssListForVstack)):
-        img_name = file_name + str(i) + '.png'
-        plt.imsave(img_name, ssListForVstack[i])
-        fromImge = Image.open(img_name)
-
-        loc = (0, (len(ssListForVstack) - 1 - i) * threadSize * 256)
-        toImage.paste(fromImge, loc)
-        # 删除临时保存的文件
-        os.remove(img_name)
-
-    toImage.save(file_name + 'PILmerged.png')
-    time_PIL2 = int(time.time())
-    print("time_PIL merge time:" + str(time_PIL2 - time_PIL1))
 
 
 
 def creat_file_name():
-    '''由当前时间生成访问url的时间戳和要保存的文件名'''
+    '''由当前时间生成访问url的时间戳和要保存的文件名.
+
+    '''
     
     time_now = int(time.time())
     time_local = time.localtime(time_now)
-
     file_name = time.strftime("%Y-%m-%d_%H-%M-%S", time_local)
-    timestamp = time_now * 1000.0
+    timestamp = time_now * 1000
 
     return timestamp, file_name
 
 
-# 多线程下载图片,传入要下载的地图的各个参数值
-def Multi_Thread_DownLoad(timestamp, file_name, TitleRight, TitleTop,
-                          TileRange, threadNum, mapLevel):                                                  #! 这个函数是在做什么，他没有返回值
-    # 多线程下载图片
+
+
+# Todo注释未完成
+def Multi_Thread_DownLoad(timestamp, file_name, TileRight, TileTop,
+                          TileRange, threadNum, mapLevel) -> None:             #! 修改了全局变量resJsonData
+    '''多线程访问服务器.
+
+    '''
     # 保存各个线程的数组
     threadSize = TileRange // threadNum  # 每个线程中的tiles行/列个数 注意要是整数int，否则会报错
     ssList = []
@@ -253,8 +208,8 @@ def Multi_Thread_DownLoad(timestamp, file_name, TitleRight, TitleTop,
     print("download start:" + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time_download_start)))
     for i in range(threadNum):
         for j in range(threadNum):
-            ssTemp = MyThread(timestamp, TitleRight - j * threadSize,
-                              TitleTop - i * threadSize, threadSize,
+            ssTemp = MyThread(timestamp, TileRight - j * threadSize,
+                              TileTop - i * threadSize, threadSize,
                               threadSize, mapLevel)
             ssList.append(ssTemp)
 
@@ -264,24 +219,16 @@ def Multi_Thread_DownLoad(timestamp, file_name, TitleRight, TitleTop,
     for item in ssList:
         item.join()     # 等待子进程执行结束，主进程再往下执行
 
-
-    time_merge_start = int(time.time())
-    print("download time:" + str(time_merge_start - time_download_start))
-    print("merge start:" + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time_merge_start)))
-
-
-    time_merge_stage1 = int(time.time())
-    print("merge stage 1 finished:" + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time_merge_stage1)))
-    print("merge stage 1 time:" + str(time_merge_stage1 - time_merge_start))
-
-
-    time_finish = int(time.time())
-    print("finish start:" + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time_finish)))
-    print("merge time:" + str(time_finish - time_merge_start))
+    return None
 
 
 
-def downloadMain(levelParam=14):
+
+# Todo注释未完成
+def downloadMain(levelParam=14) -> dict:
+    '''访问当前时刻的拥堵数据，并生成文件.
+
+    '''
 
     # 引用全局变量
     global resJsonData
@@ -292,31 +239,26 @@ def downloadMain(levelParam=14):
     # 由当前时间生成访问url的时间戳和要保存的文件名
     timestamp, file_name = creat_file_name()
 
-    # 线程和任务的各个参数                                                                                   #! 这些参数是什么意思
+    # 线程和任务的各个参数                                    #! 这些参数是什么意思
     mapParameter_default14 = [3171, 1186, 16, 2, 14]
-    # level = int(sys.argv[1])
-    level = levelParam
-    baselevel = 14
-    levelup = level - baselevel
-    TitleRight  = mapParameter_default14[0] * (2**levelup)  # 12684 25368
-    TitleTop    = mapParameter_default14[1] * (2**levelup)  # 4744 9488
-    TileRange   = mapParameter_default14[2] * (2**levelup)  # 64 128 # 每行/列tiles个数
-    threadNum   = mapParameter_default14[3]                 # 8*8 64个线程并行
-    mapLevel    = mapParameter_default14[4] + levelup       # 16 17 # 地图等级
+    level       = levelParam                                # 14
+    baselevel   = 14                                        # 14
+    levelup     = level - baselevel                         # 0
+    TileRight   = mapParameter_default14[0] * (2**levelup)  # 3171
+    TileTop     = mapParameter_default14[1] * (2**levelup)  # 1186
+    TileRange   = mapParameter_default14[2] * (2**levelup)  # 16
+    threadNum   = mapParameter_default14[3]                 # 2 线程数
+    mapLevel    = mapParameter_default14[4] + levelup       # 14 地图等级
 
-    if (level <= 17):
-        # 更新线程参数，不能整太多、太频繁，容易被封IP 线程过多会导致[Errno 104] Connection reset by peer
-        if (level == 14):
-            Multi_Thread_DownLoad(timestamp, file_name, TitleRight, TitleTop,
-                                  TileRange, threadNum, mapLevel)
-        if (level == 16):
-            threadNum = 4
-            Multi_Thread_DownLoad(timestamp, file_name, TitleRight, TitleTop,
-                                  TileRange, threadNum, mapLevel)
-        if (level == 17):
-            threadNum = 4
-            Multi_Thread_DownLoad(timestamp, file_name, TitleRight, TitleTop,
-                                  TileRange, threadNum, mapLevel)
+    
+    # 更新线程参数，不能整太多、太频繁，容易被封IP 线程过多会导致[Errno 104] Connection reset by peer
+    if (level == 14):
+        Multi_Thread_DownLoad(timestamp, file_name, TileRight, TileTop,
+                                TileRange, threadNum, mapLevel)
+    if (level == 16) or (level == 17):
+        threadNum = 4
+        Multi_Thread_DownLoad(timestamp, file_name, TileRight, TileTop,
+                                TileRange, threadNum, mapLevel)
 
 
     resData = copy.copy(resJsonData)

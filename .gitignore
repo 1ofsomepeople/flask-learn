@@ -18,3 +18,5 @@ flask-env
 *.png
 
 /data/2019_04_02_all_data_json/*.json
+*test.py
+*something.md
