@@ -120,9 +120,10 @@ def getOdHistoryData():
   # 解析接口url的参数
   paramData = request_parse(request)
   dataIndex = int(paramData.get("dataIndex"))
+  predStation = str(paramData.get("predStation"))
   dataObj = {}
   # dataObj = dataProcess.getPredData(dataIndex, 'data.csv')
-  dataObj = od.get_his_data(dataIndex) #FIXME: change the function
+  dataObj = od.get_his_data(dataIndex, predStation)
   return jsonify(dataObj)
 
 
@@ -132,10 +133,11 @@ def getOdPredData():
   # 解析接口url的参数
   paramData = request_parse(request)
   dataIndex = int(paramData.get("dataIndex"))
+  predStation = str(paramData.get("predStation"))
   predictType = str(paramData.get("predictType"))
   dataObj = {}
   # dataObj = dataProcess.getPredData(dataIndex, predictType, 'data.csv')
-  dataObj = od.get_pred_data(dataIndex, predictType) #FIXME: change the function
+  dataObj = od.get_pred_data(dataIndex, predictType, predStation)
   return jsonify(dataObj)
 
 
