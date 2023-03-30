@@ -18,5 +18,9 @@ flask-env
 *.png
 
 /data/2019_04_02_all_data_json/*.json
+/data/originalData/*.json
+*.json
+/.vscode
 
 data.csv
+*.csv

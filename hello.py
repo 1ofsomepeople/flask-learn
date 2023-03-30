@@ -21,7 +21,7 @@ class SchedulerConfig(object):
     'func': '__main__:download_interval_job', # 任务执行程序
     'args': None, # 执行程序参数
     'trigger': 'interval', # 任务执行类型，定时器
-    'seconds': 300, # 任务执行时间，单位秒
+    'seconds': 3600, # 任务执行时间，单位秒
   }]
 
 

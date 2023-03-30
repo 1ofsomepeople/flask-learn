@@ -54,7 +54,7 @@ STATION_DIC = {
   1:(116.22766114192765, 39.911219155500675),
   0:(116.2264529702029, 39.914450096247954)
 }
-STATION_CODE = {
+STATION_NAME2CODE = {
   '老山公交场站' : 0,
   '老山南路东口' : 1,
   '地铁八宝山站' : 2,
@@ -84,6 +84,65 @@ STATION_CODE = {
   '八王坟西' : 22,
   '四惠枢纽站' : 23
 }
+STATION_CODE2NAME = {
+  0:'老山公交场站',
+  1:'老山南路东口',
+  2:'地铁八宝山站',
+  3:'玉泉路口西',
+  4:'永定路口东',
+  5:'五棵松桥东',
+  6:'沙沟路口西',
+  7:'万寿路口西',
+  8:'公主坟',
+  9:'军事博物馆',
+  10:'木樨地西',
+  11:'工会大楼',
+  12:'南礼士路',
+  13:'西单路口东',
+  14:'天安门西',
+  15:'天安门东',
+  16:'东单路口西',
+  17:'北京站口东',
+  18:'日坛路',
+  19:'永安里路口西',
+  20:'大北窑西',
+  21:'大北窑东',
+  22:'八王坟西',
+  23:'四惠枢纽站'
+}
+TIME_CODE2NAME = {
+  0:'08:00',
+  1:'08:30',
+  2:'09:00',
+  3:'09:30',
+  4:'10:00',
+  5:'10:30',
+  6:'11:00',
+  7:'11:30',
+  8:'12:00',
+  9:'12:30',
+  10:'13:00',
+  11:'13:30',
+  12:'14:00',
+  13:'14:30',
+  14:'15:00',
+  15:'15:30',
+  16:'16:00',
+  17:'16:30',
+  18:'17:00',
+  19:'17:30',
+  20:'18:00',
+  21:'18:30',
+  22:'19:00',
+  23:'19:30',
+}
+
+
+
+
+
+
+
 def metrics(pred, real):
   mae = round(np.abs(pred - real).mean(), 4)
   rmse = round(np.sqrt(np.square(pred-real).mean()), 4)
@@ -132,25 +191,42 @@ def get_his_data(time_index, predStation):
   """
   source = np.load('data/test_for_vis_data.npy')
   N, _, t = source.shape
+  # print(source.shape)
+  origin = STATION_NAME2CODE[predStation]
   idx = time_index
-  source = source[:, :, 2*idx+5] # -32 是最后一天的8:00AM的索引
+  od_timeview_o = source[origin, :, 5:29] # -32 是最后一天的8:00AM的索引
+  od_timeview_d = source[:, origin, 5:29] # -32 是最后一天的8:00AM的索引
+  od_spatialview = source[:, :, idx+5] # -32 是最后一天的8:00AM的索引
   # max_val = np.log(1.0 + source.max()) #FIXME: 归一化使用的是当前数据的最大值
   # scaler = MyScaler(max_val)
   # source = scaler.transform(source)
-  source = source.tolist()
-  data1D = []
+  od_timeview_o = od_timeview_o.tolist()
+  od_timeview_d = od_timeview_d.tolist()
+  od_spatialview = od_spatialview.tolist()
+  data1D_o = []
+  data1D_d = []
   data3D = []
-  print(predStation)
-  origin = STATION_CODE[predStation]
+  data_map = []
+  data_timeview_o = []
+  data_timeview_d = []
+  # print(predStation)
   for destination in range(N):
-    data1D.append(source[origin][destination])
+    data1D_o.append(od_spatialview[origin][destination])
+    data1D_d.append(od_spatialview[destination][origin])
+    data_map.append([STATION_DIC[destination][0], STATION_DIC[destination][1], od_spatialview[origin][destination]*30]) # 加入坐标信息的od信息
   for i in range(N):
     for j in range(N):
-      data3D.append([i, j, source[i][j]])
-  predictTime = "2016/06/29 08:00:00" #FIXME: 修改时间
+      data3D.append([STATION_CODE2NAME[i], STATION_CODE2NAME[j], od_spatialview[i][j]])
+  for i in range(N):
+    for j in range(24):
+      data_timeview_o.append([STATION_CODE2NAME[i], TIME_CODE2NAME[j], od_timeview_o[i][j]])
+      data_timeview_d.append([STATION_CODE2NAME[i], TIME_CODE2NAME[j], od_timeview_d[i][j]])
+  predictTime = TIME_CODE2NAME[idx] #FIXME: 修改时间
+  # print(data_timeview_o)
   resObj = {
     "jsonName": predictTime,
-    "data": {'data1D':data1D, 'data3D':data3D}
+    "data": {'data1D_o':data1D_o, 'data1D_d':data1D_d, 'data_map':data_map, 'data3D':data3D, 'data_timeview_o':data_timeview_o, 'data_timeview_d':data_timeview_d},
+    "pred_station":predStation
   }
   return resObj
 
@@ -168,26 +244,29 @@ def get_pred_data(time_index, model, predStation):
   real_data = np.load('data/test_for_vis_data.npy')
   pred_data = pred_data.squeeze()
   t, N, _ = pred_data.shape
+  print(pred_data.shape)
   idx = time_index
-  pred = pred_data[2*idx]
-  real = real_data[:, :, 2*idx + 5]
+  pred = pred_data[idx]
+  real = real_data[:, :, idx+5]
   mae, rmse = metrics(pred, real)
   # max_val = np.log(1.0 + source.max()) #FIXME: 归一化使用的是当前数据的最大值
   # scaler = MyScaler(max_val)
   # source = scaler.transform(source)
   pred = pred.tolist()
-  data1D = []
+  data1D_o = []
   data3D = []
-  origin = STATION_CODE[predStation]
+  data_map = []
+  origin = STATION_NAME2CODE[predStation]
   for destination in range(N):
-    data1D.append(pred[origin][destination])
+    data1D_o.append(pred[origin][destination])
+    data_map.append([STATION_DIC[destination][0], STATION_DIC[destination][1], pred[origin][destination]]) # 加入坐标信息的od信息
   for i in range(N):
     for j in range(N):
-      data3D.append([i, j, pred[i][j]])
+      data3D.append([STATION_CODE2NAME[i], STATION_CODE2NAME[j], pred[i][j]])
   predictTime = "2016/06/29 08:00:00" #FIXME: 修改时间
   resObj = {
     "jsonName": predictTime,
-    "data": {'data1D':data1D, 'data3D':data3D},
+    "data": {'data1D_o':data1D_o, 'data_map':data_map, 'data3D':data3D},
     "scoreMAE": mae,
     "scoreRMSE": rmse,
   }
