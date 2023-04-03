@@ -263,7 +263,7 @@ def get_pred_data(time_index, model, predStation):
   for i in range(N):
     for j in range(N):
       data3D.append([STATION_CODE2NAME[i], STATION_CODE2NAME[j], pred[i][j]])
-  predictTime = "2016/06/29 08:00:00" #FIXME: 修改时间
+  predictTime = TIME_CODE2NAME[idx]
   resObj = {
     "jsonName": predictTime,
     "data": {'data1D_o':data1D_o, 'data_map':data_map, 'data3D':data3D},
